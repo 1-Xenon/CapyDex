@@ -10,9 +10,8 @@
     "build:data": "node scripts/build-public-catalog.mjs"
   },
   "dependencies": {
-    "vite": "^5.1.4",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
-  },
-  "devDependencies": {}
+    "react-dom": "^18.2.0",
+    "vite": "^6.4.3"
+  }
 }
