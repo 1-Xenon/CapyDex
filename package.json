@@ -2,6 +2,7 @@
   "name": "capybara-go-index",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Standalone public Capybara Go item index.",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
