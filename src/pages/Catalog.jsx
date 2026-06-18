@@ -304,7 +304,7 @@ function GemCatalog({ items }) {
     <ItemCardGrid
       items={items}
       category="gem"
-      renderCardMeta={(item) => item.subtype ? <small className="index-item-equipment">Equipment: {item.subtype}</small> : null}
+      renderCardMeta={(item) => item.subtype ? <small className="index-item-equipment">{item.subtype}</small> : null}
       renderDetail={(item) => <GemRarityEffects effects={item.extra?.gem_rarity_effects || []} />}
     />
   );
