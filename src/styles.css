@@ -83,7 +83,7 @@ main { max-width: 1280px; margin: 0 auto; padding: 1.5rem; }
 .grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .index-filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-.index-filter-grid.has-rarity { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.index-filter-grid.has-rarity, .index-filter-grid.has-extra-filter { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .field { display: flex; flex-direction: column; gap: 0.35rem; }
 .field span { font-size: 0.88rem; font-weight: 700; color: #344054; }
 .field small { color: #667085; }
@@ -135,7 +135,7 @@ th, td { padding: 0.75rem; border-bottom: 1px solid #edf1f7; text-align: left; v
 th { background: #f9fafb; color: #344054; }
 @media (max-width: 900px) {
   .app-header, .page-header { flex-direction: column; align-items: stretch; }
-  .grid-2, .grid-3, .gem-grid, .index-filter-grid, .index-filter-grid.has-rarity { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .gem-grid, .index-filter-grid, .index-filter-grid.has-rarity, .index-filter-grid.has-extra-filter { grid-template-columns: 1fr; }
 }
 .top-align { align-items: start; }
 .status-good, .status-warn {
@@ -369,9 +369,21 @@ code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; ba
   text-wrap: pretty;
 }
 
+.index-item-equipment {
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  background: #eef4ff;
+  color: #31549a;
+  font-weight: 700;
+}
+
 .index-item-card small {
   color: #667085;
   font-size: 0.78rem;
+}
+
+.index-item-card .index-item-equipment {
+  color: #31549a;
 }
 
 .index-modal-backdrop {

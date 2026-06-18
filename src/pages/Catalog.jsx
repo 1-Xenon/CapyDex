@@ -220,7 +220,7 @@ function MountSkillSection({ title, levels = [], itemType, labelForLevel }) {
   );
 }
 
-function ItemCardGrid({ items, category, renderDetail }) {
+function ItemCardGrid({ items, category, renderDetail, renderCardMeta }) {
   const [selectedItem, setSelectedItem] = useState(null);
 
   return (
@@ -236,6 +236,7 @@ function ItemCardGrid({ items, category, renderDetail }) {
               onClick={() => setSelectedItem(item)}
             >
               <span className="index-item-name">{item.name}</span>
+              {renderCardMeta ? renderCardMeta(item) : null}
               {rarity ? <small>{rarity}</small> : null}
             </button>
           );
@@ -303,6 +304,7 @@ function GemCatalog({ items }) {
     <ItemCardGrid
       items={items}
       category="gem"
+      renderCardMeta={(item) => item.subtype ? <small className="index-item-equipment">Equipment: {item.subtype}</small> : null}
       renderDetail={(item) => <GemRarityEffects effects={item.extra?.gem_rarity_effects || []} />}
     />
   );
@@ -557,6 +559,7 @@ export default function Index() {
   const [category, setCategory] = useState('adventurer');
   const [q, setQ] = useState('');
   const [rarity, setRarity] = useState('');
+  const [equipmentType, setEquipmentType] = useState('');
   const [items, setItems] = useState([]);
   const [message, setMessage] = useState('');
 
@@ -566,6 +569,7 @@ export default function Index() {
 
   useEffect(() => {
     setRarity('');
+    setEquipmentType('');
   }, [category]);
 
   const rarityOptions = useMemo(() => {
@@ -580,24 +584,34 @@ export default function Index() {
     });
   }, [items]);
 
+  const equipmentTypeOptions = useMemo(() => {
+    if (category !== 'gem') return [];
+    return [...new Set(items.map((item) => item.subtype).filter(Boolean))]
+      .sort((a, b) => String(a).localeCompare(String(b)));
+  }, [category, items]);
+
   const displayItems = useMemo(() => {
-    const filtered = rarity
-      ? items.filter((item) => itemRarity(item) === rarity)
-      : [...items];
+    const filtered = items.filter((item) => {
+      if (rarity && itemRarity(item) !== rarity) return false;
+      if (category === 'gem' && equipmentType && item.subtype !== equipmentType) return false;
+      return true;
+    });
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [items, rarity]);
+  }, [category, equipmentType, items, rarity]);
 
   const countText = useMemo(() => `${displayItems.length} item${displayItems.length === 1 ? '' : 's'}`, [displayItems]);
   const hasRarity = rarityOptions.length > 0;
+  const hasEquipmentType = equipmentTypeOptions.length > 0;
 
   return (
     <main>
       <div className="page-header"><div><h1>Index</h1><p>Browse item skills, rarity effects, levels, and progression details.</p></div><span className="pill">{countText}</span></div>
       <section className="panel">
-        <div className={`grid index-filter-grid${hasRarity ? ' has-rarity' : ''}`}>
+        <div className={`grid index-filter-grid${hasRarity || hasEquipmentType ? ' has-extra-filter' : ''}`}>
           <label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
           <label className="field"><span>Search</span><input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name or effect text..." /></label>
           {hasRarity ? <label className="field"><span>Rarity</span><select value={rarity} onChange={(event) => setRarity(event.target.value)}><option value="">All rarities</option>{rarityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
+          {hasEquipmentType ? <label className="field"><span>Equipment</span><select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
         </div>
       </section>
       <CatalogTable category={category} items={displayItems} />
