@@ -3,6 +3,19 @@ import { api } from '../lib/api.js';
 
 const CATEGORIES = ['adventurer', 'hero', 'brand', 'equipment', 'gem', 'pet', 'pet_armament', 'mount', 'artifact', 'mythic_treasure'];
 const RARITY_ORDER = ['Common', 'Great', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Immortal', 'Arcana', 'Transcendent', 'Peerless'];
+const IMAGE_FIELDS = ['image', 'image_id', 'imageId', 'icon', 'icon_id', 'iconId', 'sprite', 'sprite_id', 'spriteId'];
+const GEM_CARD_IMAGE_ID = 'gem_rarity_peerless';
+const GEM_RARITY_IMAGE_IDS = {
+  Normal: 'gem_rarity_normal',
+  Fine: 'gem_rarity_fine',
+  Rare: 'gem_rarity_rare',
+  Epic: 'gem_rarity_epic',
+  Legendary: 'gem_rarity_legendary',
+  Mythic: 'gem_rarity_mythic',
+  Immortal: 'gem_rarity_immortal',
+  Transcendent: 'gem_rarity_transcendent',
+  Peerless: 'gem_rarity_peerless',
+};
 
 function itemRarity(item) {
   const value = item.rarity || item.rarity_or_quality || '';
@@ -16,6 +29,72 @@ function categoryLabel(value) {
     .filter(Boolean)
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(' ');
+}
+
+function itemImageId(item) {
+  for (const field of IMAGE_FIELDS) {
+    const value = item[field] || item.extra?.[field];
+    if (value) return String(value);
+  }
+  return '';
+}
+
+function imageIdToSrc(imageId) {
+  if (!imageId) return '';
+  if (/^(https?:)?\/\//.test(imageId) || imageId.startsWith('data:')) return imageId;
+
+  const normalized = imageId
+    .replace(/^\/+/, '')
+    .replace(/^images\//, '')
+    .replace(/^public\/images\//, '');
+  const filename = /\.[a-z0-9]+$/i.test(normalized) ? normalized : `${normalized}.png`;
+  const encoded = filename.split('/').map((part) => encodeURIComponent(part)).join('/');
+  return `${import.meta.env.BASE_URL}images/${encoded}`;
+}
+
+function itemImageSrc(item) {
+  return imageIdToSrc(itemImageId(item).trim());
+}
+
+function itemImageFallbackSrc(item) {
+  const imageId = itemImageId(item).trim();
+  if (!imageId || !imageId.endsWith('v') || /\.[a-z0-9]+$/i.test(imageId)) return '';
+  return imageIdToSrc(imageId.slice(0, -1));
+}
+
+function ItemImage({ item, variant = 'card' }) {
+  const src = item.category === 'gem' ? imageIdToSrc(GEM_CARD_IMAGE_ID) : itemImageSrc(item);
+  const fallbackSrc = item.category === 'gem' ? '' : itemImageFallbackSrc(item);
+  if (!src) return null;
+  return (
+    <img
+      className={`index-item-image index-item-image-${variant}`}
+      src={src}
+      alt=""
+      loading="lazy"
+      data-fallback-src={fallbackSrc}
+      onError={(event) => {
+        const fallback = event.currentTarget.dataset.fallbackSrc;
+        if (fallback && event.currentTarget.src !== fallback) {
+          event.currentTarget.src = fallback;
+          event.currentTarget.dataset.fallbackSrc = '';
+          return;
+        }
+        event.currentTarget.hidden = true;
+      }}
+    />
+  );
+}
+
+function GemRarityLabel({ rarity }) {
+  const iconSrc = imageIdToSrc(GEM_RARITY_IMAGE_IDS[rarity]);
+
+  return (
+    <span className="gem-rarity-title">
+      {iconSrc ? <img className="gem-rarity-icon" src={iconSrc} alt="" loading="lazy" /> : null}
+      <span>{rarity}</span>
+    </span>
+  );
 }
 
 function AdventurerStarEffects({ effects = [] }) {
@@ -117,7 +196,9 @@ function GemRarityEffects({ effects = [] }) {
     <div className="rarity-effect-list">
       {effects.map((effect) => (
         <div className="rarity-effect-row" key={`${effect.rarity}_${effect.description}`}>
-          <strong className="rarity-effect-title">{effect.rarity}</strong>
+          <strong className="rarity-effect-title gem-rarity-effect-title">
+            <GemRarityLabel rarity={effect.rarity} />
+          </strong>
           <p>{boldPercentValues(effect.description || 'No visible player-facing description linked.')}</p>
         </div>
       ))}
@@ -235,6 +316,7 @@ function ItemCardGrid({ items, category, renderDetail, renderCardMeta }) {
               key={`${item.category}_${item.name}_${index}`}
               onClick={() => setSelectedItem(item)}
             >
+              <ItemImage item={item} />
               <span className="index-item-name">{item.name}</span>
               {renderCardMeta ? renderCardMeta(item) : null}
               {rarity ? <small>{rarity}</small> : null}
@@ -247,9 +329,12 @@ function ItemCardGrid({ items, category, renderDetail, renderCardMeta }) {
         <div className="index-modal-backdrop" role="presentation" onClick={() => setSelectedItem(null)}>
           <section className="index-modal" role="dialog" aria-modal="true" aria-label={`${selectedItem.name} details`} onClick={(event) => event.stopPropagation()}>
             <header className="index-modal-header">
-              <div>
-                <span className="pill">{categoryLabel(category)}</span>
-                <h2>{selectedItem.name}</h2>
+              <div className="index-modal-title">
+                <ItemImage item={selectedItem} variant="modal" />
+                <div>
+                  <span className="pill">{categoryLabel(category)}</span>
+                  <h2>{selectedItem.name}</h2>
+                </div>
               </div>
               <button type="button" onClick={() => setSelectedItem(null)}>Close</button>
             </header>
@@ -609,9 +694,9 @@ export default function Index() {
       <section className="panel">
         <div className={`grid index-filter-grid${hasRarity || hasEquipmentType ? ' has-extra-filter' : ''}`}>
           <label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
-          <label className="field"><span>Search</span><input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name or effect text..." /></label>
-          {hasRarity ? <label className="field"><span>Rarity</span><select value={rarity} onChange={(event) => setRarity(event.target.value)}><option value="">All rarities</option>{rarityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
-          {hasEquipmentType ? <label className="field"><span>Equipment</span><select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
+          <label className="field"><span>Search</span><input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name of item..." /></label>
+          {hasRarity ? <label className="field"><span>Rarity</span><select value={rarity} onChange={(event) => setRarity(event.target.value)}><option value="">All Rarities</option>{rarityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
+          {hasEquipmentType ? <label className="field"><span>Equipment</span><select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All Equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
         </div>
       </section>
       <CatalogTable category={category} items={displayItems} />

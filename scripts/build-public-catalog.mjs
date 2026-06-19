@@ -22,6 +22,7 @@ const categories = new Set([
   'artifact',
   'mythic_treasure'
 ]);
+const IMAGE_FIELDS = ['image', 'image_id', 'imageId', 'icon', 'icon_id', 'iconId', 'sprite', 'sprite_id', 'spriteId'];
 
 const compactEffects = (effects = []) =>
   effects.map(({ rarity, star, title, description, source_text }) =>
@@ -83,9 +84,12 @@ const items = source.items
   .filter((item) => categories.has(item.category))
   .map((item) => {
     const output = { category: item.category, name: item.name };
+    if (item.image_id) output.image_id = item.image_id;
     const rarity = item.rarity || item.rarity_or_quality;
     if (rarity) output.rarity = rarity;
     if (item.subtype) output.subtype = item.subtype;
+    const imageField = IMAGE_FIELDS.find((field) => item[field] || item.extra?.[field]);
+    if (imageField) output.image_id = item[imageField] || item.extra?.[imageField];
     const extra = compactExtra(item);
     if (Object.keys(extra).length) output.extra = extra;
     return output;
