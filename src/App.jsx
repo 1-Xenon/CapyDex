@@ -10,7 +10,7 @@ export default function App() {
       <header className="app-header public-index-header">
         <div>
           <strong>Capybara Go Index</strong>
-          <span>Updated as of v1.8.16</span>
+          <span>Updated as of v1.8.17</span>
         </div>
         <nav className="public-index-tabs" aria-label="Primary">
           <button type="button" className={tab === 'index' ? 'active' : ''} onClick={() => setTab('index')}>Index</button>
