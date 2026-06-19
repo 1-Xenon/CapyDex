@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api.js';
 
 const CATEGORIES = ['adventurer', 'hero', 'brand', 'equipment', 'gem', 'pet', 'pet_armament', 'mount', 'artifact', 'mythic_treasure'];
+const SORTED_CATEGORIES = [...CATEGORIES].sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b)));
 const RARITY_ORDER = ['Common', 'Great', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Immortal', 'Arcana', 'Transcendent', 'Peerless'];
 const IMAGE_FIELDS = ['image', 'image_id', 'imageId', 'icon', 'icon_id', 'iconId', 'sprite', 'sprite_id', 'spriteId'];
 const GEM_CARD_IMAGE_ID = 'gem_rarity_peerless';
@@ -452,13 +453,13 @@ function MountCatalog({ items }) {
           <>
             <MountSkillSection
               title="Active Skill"
-              levels={item.extra?.riding_skill_levels || []}
+              levels={item.extra?.mount_skill_levels || []}
               itemType="Active Skill"
               labelForLevel={(level) => mountActiveSkillLabel(rawRarity, level)}
             />
             <MountSkillSection
               title="Deploy Skill"
-              levels={item.extra?.mount_skill_levels || []}
+              levels={item.extra?.riding_skill_levels || []}
               itemType="Deploy Skill"
               labelForLevel={mountDeploySkillLabel}
             />
@@ -480,13 +481,13 @@ function ArtifactCatalog({ items }) {
           <>
             <MountSkillSection
               title="Active Skill"
-              levels={item.extra?.artifact_deploy_skill_levels || []}
+              levels={item.extra?.artifact_active_skill_levels || []}
               itemType="Active Skill"
               labelForLevel={(level) => mountActiveSkillLabel(rawRarity, level)}
             />
             <MountSkillSection
               title="Deploy Skill"
-              levels={item.extra?.artifact_active_skill_levels || []}
+              levels={item.extra?.artifact_deploy_skill_levels || []}
               itemType="Deploy Skill"
               labelForLevel={mountDeploySkillLabel}
             />
@@ -693,7 +694,7 @@ export default function Index() {
       <div className="page-header"><div><h1>The Index</h1><p>Browse item skills, rarity effects, levels, and progression details.</p></div><span className="pill">{countText}</span></div>
       <section className="panel">
         <div className={`grid index-filter-grid${hasRarity || hasEquipmentType ? ' has-extra-filter' : ''}`}>
-          <label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
+          <label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{SORTED_CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
           <label className="field"><span>Search</span><input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name of item..." /></label>
           {hasRarity ? <label className="field"><span>Rarity</span><select value={rarity} onChange={(event) => setRarity(event.target.value)}><option value="">All Rarities</option>{rarityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
           {hasEquipmentType ? <label className="field"><span>Equipment</span><select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All Equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
