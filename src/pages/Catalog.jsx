@@ -690,7 +690,7 @@ export default function Index() {
 
   return (
     <main>
-      <div className="page-header"><div><h1>Index</h1><p>Browse item skills, rarity effects, levels, and progression details.</p></div><span className="pill">{countText}</span></div>
+      <div className="page-header"><div><h1>The Index</h1><p>Browse item skills, rarity effects, levels, and progression details.</p></div><span className="pill">{countText}</span></div>
       <section className="panel">
         <div className={`grid index-filter-grid${hasRarity || hasEquipmentType ? ' has-extra-filter' : ''}`}>
           <label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
