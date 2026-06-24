@@ -32,6 +32,38 @@ function categoryLabel(value) {
     .join(' ');
 }
 
+function itemSlug(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+}
+
+function basePath() {
+  return import.meta.env.BASE_URL.replace(/\/$/, '');
+}
+
+function itemRoutePath(item) {
+  return `${basePath()}/${item.category}=${itemSlug(item.name)}`;
+}
+
+function indexRoutePath() {
+  return `${basePath()}/`;
+}
+
+function parseItemRoute() {
+  if (typeof window === 'undefined') return null;
+
+  const base = basePath();
+  let pathname = window.location.pathname;
+  if (base && pathname.startsWith(base)) {
+    pathname = pathname.slice(base.length) || '/';
+  }
+
+  const match = pathname.match(/^\/([^/=]+)=([^/]+)$/);
+  if (!match) return null;
+
+  const [, category, slug] = match;
+  return CATEGORIES.includes(category) ? { category, slug } : null;
+}
+
 function itemImageId(item) {
   for (const field of IMAGE_FIELDS) {
     const value = item[field] || item.extra?.[field];
@@ -302,8 +334,31 @@ function MountSkillSection({ title, levels = [], itemType, labelForLevel }) {
   );
 }
 
-function ItemCardGrid({ items, category, renderDetail, renderCardMeta }) {
+function ItemCardGrid({ items, category, routeTarget, setRouteTarget, renderDetail, renderCardMeta }) {
   const [selectedItem, setSelectedItem] = useState(null);
+
+  useEffect(() => {
+    if (routeTarget?.category !== category) {
+      setSelectedItem(null);
+      return;
+    }
+
+    const routeItem = items.find((item) => itemSlug(item.name) === routeTarget.slug);
+    setSelectedItem(routeItem || null);
+  }, [category, items, routeTarget]);
+
+  function selectItem(item) {
+    setSelectedItem(item);
+    const nextTarget = { category: item.category, slug: itemSlug(item.name) };
+    window.history.pushState(nextTarget, '', itemRoutePath(item));
+    setRouteTarget(nextTarget);
+  }
+
+  function clearSelectedItem() {
+    setSelectedItem(null);
+    window.history.pushState(null, '', indexRoutePath());
+    setRouteTarget(null);
+  }
 
   return (
     <>
@@ -315,7 +370,7 @@ function ItemCardGrid({ items, category, renderDetail, renderCardMeta }) {
               type="button"
               className="index-item-card"
               key={`${item.category}_${item.name}_${index}`}
-              onClick={() => setSelectedItem(item)}
+              onClick={() => selectItem(item)}
             >
               <ItemImage item={item} />
               <span className="index-item-name">{item.name}</span>
@@ -327,7 +382,7 @@ function ItemCardGrid({ items, category, renderDetail, renderCardMeta }) {
       </div>
 
       {selectedItem ? (
-        <div className="index-modal-backdrop" role="presentation" onClick={() => setSelectedItem(null)}>
+        <div className="index-modal-backdrop" role="presentation" onClick={clearSelectedItem}>
           <section className="index-modal" role="dialog" aria-modal="true" aria-label={`${selectedItem.name} details`} onClick={(event) => event.stopPropagation()}>
             <header className="index-modal-header">
               <div className="index-modal-title">
@@ -337,7 +392,7 @@ function ItemCardGrid({ items, category, renderDetail, renderCardMeta }) {
                   <h2>{selectedItem.name}</h2>
                 </div>
               </div>
-              <button type="button" onClick={() => setSelectedItem(null)}>Close</button>
+              <button type="button" onClick={clearSelectedItem}>Close</button>
             </header>
             <div className="index-modal-body">
               {renderDetail(selectedItem)}
@@ -349,31 +404,37 @@ function ItemCardGrid({ items, category, renderDetail, renderCardMeta }) {
   );
 }
 
-function AdventurerCatalog({ items }) {
+function AdventurerCatalog({ items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category="adventurer"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => <AdventurerStarEffects effects={item.extra?.adventurer_star_effects || []} />}
     />
   );
 }
 
-function HeroBrandCatalog({ category, items }) {
+function HeroBrandCatalog({ category, items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category={category}
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => <RarityEffects effects={item.extra?.rarity_effects || []} />}
     />
   );
 }
 
-function EquipmentCatalog({ items }) {
+function EquipmentCatalog({ items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category="equipment"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => (
         <>
           <RarityEffects effects={item.extra?.equipment_rarity_effects || []} />
@@ -385,22 +446,26 @@ function EquipmentCatalog({ items }) {
   );
 }
 
-function GemCatalog({ items }) {
+function GemCatalog({ items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category="gem"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderCardMeta={(item) => item.subtype ? <small className="index-item-equipment">{item.subtype}</small> : null}
       renderDetail={(item) => <GemRarityEffects effects={item.extra?.gem_rarity_effects || []} />}
     />
   );
 }
 
-function PetCatalog({ items }) {
+function PetCatalog({ items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category="pet"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => (
         <>
           <PetBattleSkillLevels levels={item.extra?.pet_battle_skill_levels || []} />
@@ -412,11 +477,13 @@ function PetCatalog({ items }) {
 }
 
 
-function PetArmamentCatalog({ items }) {
+function PetArmamentCatalog({ items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category="pet_armament"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => {
         const skillLevels = item.extra?.pet_armament_skill_levels || [];
         const skillName = item.extra?.pet_armament_skill_name || '';
@@ -442,11 +509,13 @@ function PetArmamentCatalog({ items }) {
   );
 }
 
-function MountCatalog({ items }) {
+function MountCatalog({ items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category="mount"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => {
         const rawRarity = item.rarity || item.rarity_or_quality || '';
         return (
@@ -470,11 +539,13 @@ function MountCatalog({ items }) {
   );
 }
 
-function ArtifactCatalog({ items }) {
+function ArtifactCatalog({ items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category="artifact"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => {
         const rawRarity = item.rarity || item.rarity_or_quality || '';
         return (
@@ -565,11 +636,13 @@ function MythicTreasureEquipmentEffects({ effects = [] }) {
   );
 }
 
-function MythicTreasureCatalog({ items }) {
+function MythicTreasureCatalog({ items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category="mythic_treasure"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => {
         const baseStats = item.extra?.mythic_treasure_base_stats;
         const equipmentEffects = item.extra?.mythic_treasure_equipment_effects || [];
@@ -584,11 +657,13 @@ function MythicTreasureCatalog({ items }) {
   );
 }
 
-function GenericCatalog({ category, items }) {
+function GenericCatalog({ category, items, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
       category={category}
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
       renderDetail={(item) => (
         <div className="rarity-effect-list">
           <div className="rarity-effect-row">
@@ -601,53 +676,69 @@ function GenericCatalog({ category, items }) {
   );
 }
 
-function CatalogTable({ category, items }) {
+function CatalogTable({ category, items, routeTarget, setRouteTarget }) {
+  const routeProps = { routeTarget, setRouteTarget };
+
   if (category === 'adventurer') {
-    return <AdventurerCatalog items={items} />;
+    return <AdventurerCatalog items={items} {...routeProps} />;
   }
 
   if (category === 'hero' || category === 'brand') {
-    return <HeroBrandCatalog category={category} items={items} />;
+    return <HeroBrandCatalog category={category} items={items} {...routeProps} />;
   }
 
   if (category === 'equipment') {
-    return <EquipmentCatalog items={items} />;
+    return <EquipmentCatalog items={items} {...routeProps} />;
   }
 
   if (category === 'gem') {
-    return <GemCatalog items={items} />;
+    return <GemCatalog items={items} {...routeProps} />;
   }
 
   if (category === 'pet') {
-    return <PetCatalog items={items} />;
+    return <PetCatalog items={items} {...routeProps} />;
   }
 
   if (category === 'pet_armament') {
-    return <PetArmamentCatalog items={items} />;
+    return <PetArmamentCatalog items={items} {...routeProps} />;
   }
 
   if (category === 'mount') {
-    return <MountCatalog items={items} />;
+    return <MountCatalog items={items} {...routeProps} />;
   }
 
   if (category === 'artifact') {
-    return <ArtifactCatalog items={items} />;
+    return <ArtifactCatalog items={items} {...routeProps} />;
   }
 
   if (category === 'mythic_treasure') {
-    return <MythicTreasureCatalog items={items} />;
+    return <MythicTreasureCatalog items={items} {...routeProps} />;
   }
 
-  return <GenericCatalog category={category} items={items} />;
+  return <GenericCatalog category={category} items={items} {...routeProps} />;
 }
 
 export default function Index() {
-  const [category, setCategory] = useState('adventurer');
+  const [routeTarget, setRouteTarget] = useState(() => parseItemRoute());
+  const [category, setCategory] = useState(() => parseItemRoute()?.category || 'adventurer');
   const [q, setQ] = useState('');
   const [rarity, setRarity] = useState('');
   const [equipmentType, setEquipmentType] = useState('');
   const [items, setItems] = useState([]);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    function syncRouteTarget() {
+      const nextRouteTarget = parseItemRoute();
+      setRouteTarget(nextRouteTarget);
+      if (nextRouteTarget?.category) {
+        setCategory(nextRouteTarget.category);
+      }
+    }
+
+    window.addEventListener('popstate', syncRouteTarget);
+    return () => window.removeEventListener('popstate', syncRouteTarget);
+  }, []);
 
   useEffect(() => {
     api.catalog({ category, q }).then((data) => setItems(data.items || [])).catch((error) => setMessage(error.message));
@@ -689,18 +780,24 @@ export default function Index() {
   const hasRarity = rarityOptions.length > 0;
   const hasEquipmentType = equipmentTypeOptions.length > 0;
 
+  function changeCategory(nextCategory) {
+    setCategory(nextCategory);
+    setRouteTarget(null);
+    window.history.pushState(null, '', indexRoutePath());
+  }
+
   return (
     <main>
       <div className="page-header"><div><h1>The Index</h1><p>Browse item skills, rarity effects, levels, and progression details.</p></div><span className="pill">{countText}</span></div>
       <section className="panel">
         <div className={`grid index-filter-grid${hasRarity || hasEquipmentType ? ' has-extra-filter' : ''}`}>
-          <label className="field"><span>Category</span><select value={category} onChange={(event) => setCategory(event.target.value)}>{SORTED_CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
+          <label className="field"><span>Category</span><select value={category} onChange={(event) => changeCategory(event.target.value)}>{SORTED_CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
           <label className="field"><span>Search</span><input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name of item..." /></label>
           {hasRarity ? <label className="field"><span>Rarity</span><select value={rarity} onChange={(event) => setRarity(event.target.value)}><option value="">All Rarities</option>{rarityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
           {hasEquipmentType ? <label className="field"><span>Equipment</span><select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All Equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
         </div>
       </section>
-      <CatalogTable category={category} items={displayItems} />
+      <CatalogTable category={category} items={displayItems} routeTarget={routeTarget} setRouteTarget={setRouteTarget} />
       {message ? <div className="toast">{message}</div> : null}
     </main>
   );
