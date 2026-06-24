@@ -17,11 +17,31 @@ const GEM_RARITY_IMAGE_IDS = {
   Transcendent: 'gem_rarity_transcendent',
   Peerless: 'gem_rarity_peerless',
 };
+const RARITY_CARD_COLORS = {
+  Normal: '#D9D8F0',
+  Fine: '#48C048',
+  Rare: '#58B0F0',
+  Epic: '#A860F8',
+  Legendary: '#FF9850',
+  Mythic: '#E85050',
+  Immortal: '#FF88A0',
+  Transcendent: '#4928ED',
+  Peerless: '#35E69E',
+};
 
 function itemRarity(item) {
   const value = item.rarity || item.rarity_or_quality || '';
-  if ((item.category === 'mount' || item.category === 'artifact') && value === 'Arcana') return 'Transcendent';
+  if (['pet', 'mount', 'artifact'].includes(item.category) && value === 'Arcana') return 'Transcendent';
   return value === 'Quality-dependent' ? '' : value;
+}
+
+function rarityCardStyle(rarity) {
+  const color = RARITY_CARD_COLORS[rarity];
+  if (!color) return undefined;
+
+  return {
+    '--rarity-card-color': color,
+  };
 }
 
 function categoryLabel(value) {
@@ -369,6 +389,7 @@ function ItemCardGrid({ items, category, routeTarget, setRouteTarget, renderDeta
             <button
               type="button"
               className="index-item-card"
+              style={rarityCardStyle(rarity)}
               key={`${item.category}_${item.name}_${index}`}
               onClick={() => selectItem(item)}
             >
@@ -788,7 +809,7 @@ export default function Index() {
 
   return (
     <main>
-      <div className="page-header"><div><h1>The Index</h1><p>Browse item skills, rarity effects, levels, and progression details.</p></div><span className="pill">{countText}</span></div>
+      <div className="page-header"><div><h1>The Index</h1></div><span className="pill">{countText}</span></div>
       <section className="panel">
         <div className={`grid index-filter-grid${hasRarity || hasEquipmentType ? ' has-extra-filter' : ''}`}>
           <label className="field"><span>Category</span><select value={category} onChange={(event) => changeCategory(event.target.value)}>{SORTED_CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
