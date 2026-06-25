@@ -1,26 +1,19 @@
-# Capybara Go Index
+# CapyDex
 
-Standalone public item Index extracted from the private Capybara Go research app.
+An index that stores information of items in the game Capybara Go
 
-## Local development
+## What This Site Contains
+Information on the following systems:
+1. Adventurers
+2. Artifacts
+3. Brands
+4. Equipments
+5. Gems
+6. Heroes
+7. Mounts
+8. Mythic Treasure (known as Relics)
+9. Pets
+10. Pet Armaments
 
-```bash
-npm install
-npm run dev
-```
-
-## Production build
-
-```bash
-npm run build
-```
-
-The generated static website is written to `dist/`.
-
-## Refresh public data
-
-Pass the private app's `catalog.seed.json` to the included exporter:
-
-```bash
-npm run build:data -- /path/to/catalog.seed.json
-```
+## Reporting of Bugs / Feedback for Site
+Contact @1_xenon on Discord for any bugs found within the site or if you have any suggestions that you would like to provide to further improve the site
