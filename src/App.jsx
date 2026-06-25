@@ -45,7 +45,7 @@ export default function App() {
     <>
       <header className="app-header public-index-header">
         <div>
-          <strong>Capybara Go Index</strong>
+          <strong>CapyDex - The Holy Grail </strong>
           <span>Updated as of v1.8.17</span>
         </div>
         <nav className="public-index-tabs" aria-label="Primary">
