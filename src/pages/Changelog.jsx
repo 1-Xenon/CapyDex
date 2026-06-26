@@ -2,14 +2,19 @@ import React from 'react';
 
 const UPDATES = [
   {
+    date: '2026-06-26',
+    title: 'Added 1 new brand',
+    changes: [
+      "Added Ootengu",
+    ]
+  },
+  {
     date: '2026-06-24',
     title: 'Improvements on UI/UX',
     changes: [
       "Added colours based on rarity to the cards for items with rarities tagged to them",
     ]
   },
-
-
   {
     date: '2026-06-16',
     title: 'Creation of site',

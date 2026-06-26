@@ -46,7 +46,7 @@ export default function App() {
       <header className="app-header public-index-header">
         <div>
           <strong>CapyDex - The Holy Grail </strong>
-          <span>Updated as of v1.8.17</span>
+          <span>Updated as of v1.8.18</span>
         </div>
         <nav className="public-index-tabs" aria-label="Primary">
           <button type="button" className={tab === 'index' ? 'active' : ''} onClick={() => changeTab('index')}>Index</button>
