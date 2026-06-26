@@ -61,7 +61,8 @@ function basePath() {
 }
 
 function itemRoutePath(item) {
-  return `${basePath()}/${item.category}=${itemSlug(item.name)}`;
+  const params = new URLSearchParams({ [item.category]: itemSlug(item.name) });
+  return `${basePath()}/?${params.toString()}`;
 }
 
 function indexRoutePath() {
@@ -78,10 +79,17 @@ function parseItemRoute() {
   }
 
   const match = pathname.match(/^\/([^/=]+)=([^/]+)$/);
-  if (!match) return null;
+  if (!match) {
+    const params = new URLSearchParams(window.location.search);
+    for (const category of CATEGORIES) {
+      const slug = params.get(category);
+      if (slug) return { category, slug: itemSlug(decodeURIComponent(slug)) };
+    }
+    return null;
+  }
 
   const [, category, slug] = match;
-  return CATEGORIES.includes(category) ? { category, slug } : null;
+  return CATEGORIES.includes(category) ? { category, slug: itemSlug(decodeURIComponent(slug)) } : null;
 }
 
 function itemImageId(item) {
@@ -354,7 +362,7 @@ function MountSkillSection({ title, levels = [], itemType, labelForLevel }) {
   );
 }
 
-function ItemCardGrid({ items, category, routeTarget, setRouteTarget, renderDetail, renderCardMeta }) {
+function ItemCardGrid({ items, routeItems = items, category, routeTarget, setRouteTarget, renderDetail, renderCardMeta }) {
   const [selectedItem, setSelectedItem] = useState(null);
 
   useEffect(() => {
@@ -363,9 +371,9 @@ function ItemCardGrid({ items, category, routeTarget, setRouteTarget, renderDeta
       return;
     }
 
-    const routeItem = items.find((item) => itemSlug(item.name) === routeTarget.slug);
+    const routeItem = routeItems.find((item) => itemSlug(item.name) === routeTarget.slug);
     setSelectedItem(routeItem || null);
-  }, [category, items, routeTarget]);
+  }, [category, routeItems, routeTarget]);
 
   function selectItem(item) {
     setSelectedItem(item);
@@ -425,10 +433,11 @@ function ItemCardGrid({ items, category, routeTarget, setRouteTarget, renderDeta
   );
 }
 
-function AdventurerCatalog({ items, routeTarget, setRouteTarget }) {
+function AdventurerCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category="adventurer"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -437,10 +446,11 @@ function AdventurerCatalog({ items, routeTarget, setRouteTarget }) {
   );
 }
 
-function HeroBrandCatalog({ category, items, routeTarget, setRouteTarget }) {
+function HeroBrandCatalog({ category, items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category={category}
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -449,10 +459,11 @@ function HeroBrandCatalog({ category, items, routeTarget, setRouteTarget }) {
   );
 }
 
-function EquipmentCatalog({ items, routeTarget, setRouteTarget }) {
+function EquipmentCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category="equipment"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -467,10 +478,11 @@ function EquipmentCatalog({ items, routeTarget, setRouteTarget }) {
   );
 }
 
-function GemCatalog({ items, routeTarget, setRouteTarget }) {
+function GemCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category="gem"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -480,10 +492,11 @@ function GemCatalog({ items, routeTarget, setRouteTarget }) {
   );
 }
 
-function PetCatalog({ items, routeTarget, setRouteTarget }) {
+function PetCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category="pet"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -498,10 +511,11 @@ function PetCatalog({ items, routeTarget, setRouteTarget }) {
 }
 
 
-function PetArmamentCatalog({ items, routeTarget, setRouteTarget }) {
+function PetArmamentCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category="pet_armament"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -530,10 +544,11 @@ function PetArmamentCatalog({ items, routeTarget, setRouteTarget }) {
   );
 }
 
-function MountCatalog({ items, routeTarget, setRouteTarget }) {
+function MountCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category="mount"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -560,10 +575,11 @@ function MountCatalog({ items, routeTarget, setRouteTarget }) {
   );
 }
 
-function ArtifactCatalog({ items, routeTarget, setRouteTarget }) {
+function ArtifactCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category="artifact"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -657,10 +673,11 @@ function MythicTreasureEquipmentEffects({ effects = [] }) {
   );
 }
 
-function MythicTreasureCatalog({ items, routeTarget, setRouteTarget }) {
+function MythicTreasureCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category="mythic_treasure"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -678,10 +695,11 @@ function MythicTreasureCatalog({ items, routeTarget, setRouteTarget }) {
   );
 }
 
-function GenericCatalog({ category, items, routeTarget, setRouteTarget }) {
+function GenericCatalog({ category, items, routeItems, routeTarget, setRouteTarget }) {
   return (
     <ItemCardGrid
       items={items}
+      routeItems={routeItems}
       category={category}
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
@@ -697,8 +715,8 @@ function GenericCatalog({ category, items, routeTarget, setRouteTarget }) {
   );
 }
 
-function CatalogTable({ category, items, routeTarget, setRouteTarget }) {
-  const routeProps = { routeTarget, setRouteTarget };
+function CatalogTable({ category, items, routeItems, routeTarget, setRouteTarget }) {
+  const routeProps = { routeItems, routeTarget, setRouteTarget };
 
   if (category === 'adventurer') {
     return <AdventurerCatalog items={items} {...routeProps} />;
@@ -748,15 +766,23 @@ export default function Index() {
   const [items, setItems] = useState([]);
   const [message, setMessage] = useState('');
 
+  function applyRouteTarget(nextRouteTarget) {
+    setRouteTarget(nextRouteTarget);
+    if (!nextRouteTarget) return;
+
+    setCategory(nextRouteTarget.category);
+    setQ('');
+    setRarity('');
+    setEquipmentType('');
+  }
+
   useEffect(() => {
     function syncRouteTarget() {
       const nextRouteTarget = parseItemRoute();
-      setRouteTarget(nextRouteTarget);
-      if (nextRouteTarget?.category) {
-        setCategory(nextRouteTarget.category);
-      }
+      applyRouteTarget(nextRouteTarget);
     }
 
+    syncRouteTarget();
     window.addEventListener('popstate', syncRouteTarget);
     return () => window.removeEventListener('popstate', syncRouteTarget);
   }, []);
@@ -818,7 +844,7 @@ export default function Index() {
           {hasEquipmentType ? <label className="field"><span>Equipment</span><select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All Equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
         </div>
       </section>
-      <CatalogTable category={category} items={displayItems} routeTarget={routeTarget} setRouteTarget={setRouteTarget} />
+      <CatalogTable category={category} items={displayItems} routeItems={items} routeTarget={routeTarget} setRouteTarget={setRouteTarget} />
       {message ? <div className="toast">{message}</div> : null}
     </main>
   );
