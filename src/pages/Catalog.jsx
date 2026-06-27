@@ -31,7 +31,7 @@ const RARITY_CARD_COLORS = {
 
 function itemRarity(item) {
   const value = item.rarity || item.rarity_or_quality || '';
-  if (['pet', 'mount', 'artifact'].includes(item.category) && value === 'Arcana') return 'Transcendent';
+  if (['pet', 'pet_armament', 'mount', 'artifact'].includes(item.category) && value === 'Arcana') return 'Transcendent';
   return value === 'Quality-dependent' ? '' : value;
 }
 
@@ -41,7 +41,12 @@ function rarityCardStyle(rarity) {
 
   return {
     '--rarity-card-color': color,
+    '--rarity-card-border-color': `color-mix(in srgb, ${color} 52%, white)`,
   };
+}
+
+function rarityClassName(rarity) {
+  return rarity ? `index-item-card-rarity-${itemSlug(rarity)}` : '';
 }
 
 function categoryLabel(value) {
@@ -396,7 +401,7 @@ function ItemCardGrid({ items, routeItems = items, category, routeTarget, setRou
           return (
             <button
               type="button"
-              className="index-item-card"
+              className={`index-item-card ${rarityClassName(rarity)}`}
               style={rarityCardStyle(rarity)}
               key={`${item.category}_${item.name}_${index}`}
               onClick={() => selectItem(item)}

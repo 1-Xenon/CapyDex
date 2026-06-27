@@ -247,18 +247,34 @@ input:focus, select:focus, textarea:focus {
   justify-content: center;
   gap: 0.45rem;
   text-align: center;
-  border: 1px solid var(--border);
+  border: 4px solid transparent;
   border-radius: 18px;
   color: #F8F3DD;
-  background: var(--rarity-card-color, linear-gradient(180deg, rgba(61,72,77,0.96), rgba(45,53,59,0.96)));
+  background:
+    linear-gradient(var(--rarity-card-color, rgba(61,72,77,0.96)), var(--rarity-card-color, rgba(45,53,59,0.96))) padding-box,
+    linear-gradient(135deg, var(--rarity-card-border-color, var(--border)), rgba(255, 255, 255, 0.68)) border-box;
   box-shadow: 0 14px 34px rgba(13, 18, 20, 0.22);
 }
 .index-item-card:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--rarity-card-color, var(--green)) 68%, white);
-  background: var(--rarity-card-color, linear-gradient(180deg, var(--bg-green), var(--bg2)));
+  border-color: transparent;
+  background:
+    linear-gradient(var(--rarity-card-color, var(--bg-green)), var(--rarity-card-color, var(--bg2))) padding-box,
+    linear-gradient(135deg, var(--rarity-card-border-color, var(--green)), white) border-box;
   box-shadow: 0 18px 42px rgba(13, 18, 20, 0.34);
   filter: brightness(1.05);
+}
+.index-item-card-rarity-transcendent {
+  border: 5px solid transparent;
+  background:
+    linear-gradient(150deg, #2860e3 10%, #a436ef) padding-box,
+    linear-gradient(135deg, #a7fefe, #f08ff4) border-box;
+}
+.index-item-card-rarity-transcendent:hover {
+  border-color: transparent;
+  background:
+    linear-gradient(150deg, #2860e3 10%, #a436ef) padding-box,
+    linear-gradient(135deg, #a7fefe, #f08ff4) border-box;
 }
 .index-item-name {
   display: block;
