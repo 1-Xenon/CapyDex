@@ -23,8 +23,8 @@ const RARITY_CARD_COLORS = {
   Rare: '#58B0F0',
   Epic: '#A860F8',
   Legendary: '#FF9850',
-  Mythic: '#E85050',
-  Immortal: '#FF88A0',
+  Mythic: '#af2342',
+  Immortal: '#e762a9',
   Transcendent: '#4928ED',
   Peerless: '#35E69E',
 };
@@ -41,7 +41,7 @@ function rarityCardStyle(rarity) {
 
   return {
     '--rarity-card-color': color,
-    '--rarity-card-border-color': `color-mix(in srgb, ${color} 52%, white)`,
+    '--rarity-card-border-color': `color-mix(in srgb, ${color} 60%, white)`,
   };
 }
 
