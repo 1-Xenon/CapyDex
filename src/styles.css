@@ -34,8 +34,13 @@
 
 * { box-sizing: border-box; }
 html, body, #root { min-height: 100%; }
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
 body {
   margin: 0;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at 16% 0%, rgba(167, 192, 128, 0.10), transparent 31rem),
     radial-gradient(circle at 88% 12%, rgba(127, 187, 179, 0.08), transparent 28rem),
@@ -46,6 +51,7 @@ body {
 
 button, input, select, textarea { font: inherit; }
 button {
+  min-height: 44px;
   cursor: pointer;
   border: 1px solid var(--border);
   border-radius: 10px;
@@ -91,7 +97,12 @@ nav { display: flex; gap: 0.5rem; flex-wrap: wrap; }
   text-align: center;
 }
 
-main { max-width: 1280px; margin: 0 auto; padding: 1.5rem; color: var(--text); }
+main {
+  width: min(100%, 1280px);
+  margin: 0 auto;
+  padding: clamp(0.85rem, 2.4vw, 1.5rem);
+  color: var(--text);
+}
 .page-header {
   display: flex;
   justify-content: space-between;
@@ -232,8 +243,8 @@ input:focus, select:focus, textarea:focus {
 
 .index-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr));
+  gap: clamp(0.65rem, 2vw, 1rem);
   align-items: stretch;
 }
 .index-item-card {
@@ -503,17 +514,139 @@ input:focus, select:focus, textarea:focus {
 
 @media (max-width: 900px) {
   .app-header, .page-header { flex-direction: column; align-items: stretch; }
+  .app-header {
+    position: static;
+    padding: 0.85rem;
+  }
+  .app-header strong { font-size: 1rem; }
+  .app-header span { font-size: 0.8rem; }
   .index-filter-grid, .index-filter-grid.has-extra-filter { grid-template-columns: 1fr; }
+  .panel {
+    margin-bottom: 0.85rem;
+    padding: 0.85rem;
+    border-radius: 12px;
+  }
+  .field { gap: 0.28rem; }
 }
 @media (max-width: 650px) {
+  body {
+    background:
+      radial-gradient(circle at 18% 0%, rgba(167, 192, 128, 0.08), transparent 22rem),
+      linear-gradient(180deg, var(--bg-dim) 0%, #20272b 100%);
+  }
+  main { padding: 0.75rem; }
+  .page-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .page-header h1 { font-size: 1.35rem; }
+  .pill {
+    flex: 0 0 auto;
+    font-size: 0.76rem;
+    padding: 0.2rem 0.55rem;
+  }
   .public-index-tabs { width: 100%; }
-  .public-index-tabs button { flex: 1; min-width: 0; }
-  .index-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .index-item-card { min-height: 130px; }
-  .index-modal-header { flex-direction: column; }
+  .public-index-tabs button {
+    flex: 1;
+    min-width: 0;
+    padding-inline: 0.5rem;
+  }
+  input, select, textarea {
+    min-height: 44px;
+    padding: 0.62rem 0.7rem;
+    font-size: 16px;
+  }
+  .index-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.65rem;
+  }
+  .index-item-card {
+    min-height: 134px;
+    padding: 0.72rem 0.55rem;
+    border-width: 3px;
+    border-radius: 16px;
+    gap: 0.35rem;
+  }
+  .index-item-card:hover { transform: none; }
+  .index-item-image-card {
+    width: clamp(46px, 42%, 64px);
+    height: clamp(46px, 42%, 64px);
+  }
+  .index-item-name {
+    font-size: 0.88rem;
+    line-height: 1.18;
+  }
+  .index-item-card small,
+  .index-item-equipment { font-size: 0.74rem; }
+  .index-card-grid-gem .index-item-card {
+    min-height: 168px;
+    padding: 0.65rem 0.5rem;
+  }
+  .index-card-grid-gem .index-item-image-card {
+    width: 42px;
+    height: 42px;
+  }
+  .index-card-grid-gem .index-item-name {
+    font-size: 0.72rem;
+    line-height: 1.22;
+  }
+  .index-modal-backdrop {
+    align-items: end;
+    padding: 0.5rem;
+  }
+  .index-modal {
+    width: 100%;
+    max-height: calc(100dvh - 1rem);
+    border-radius: 16px;
+  }
+  .index-modal-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    padding: 0.85rem;
+  }
+  .index-modal-header h2 {
+    margin-top: 0.2rem;
+    font-size: 1.18rem;
+    line-height: 1.2;
+  }
   .index-modal-header button { width: 100%; }
+  .index-modal-title { gap: 0.65rem; }
   .index-item-image-modal { width: 60px; height: 60px; }
+  .index-modal-body { padding: 0.85rem; }
+  .star-effect-list, .rarity-effect-list { gap: 0.55rem; }
+  .star-effect-row {
+    grid-template-columns: 44px 1fr;
+    gap: 0.65rem;
+    padding: 0.65rem;
+  }
+  .rarity-effect-row { padding: 0.7rem; }
+  .rarity-effect-row p,
+  .star-effect-copy p { line-height: 1.42; }
   .changelog-entry { grid-template-columns: 1fr; }
+  .public-index-footer {
+    padding: 0 0.75rem 1rem;
+    font-size: 0.74rem;
+  }
+  .mythic-stat-table-wrap { border-radius: 6px; }
+  .mythic-stat-table { min-width: 460px; }
+  .mythic-stat-table th,
+  .mythic-stat-table td {
+    padding: 0.55rem 0.6rem;
+    font-size: 0.82rem;
+  }
+}
+@media (max-width: 380px) {
+  .index-card-grid { gap: 0.55rem; }
+  .index-item-card {
+    min-height: 126px;
+    padding: 0.6rem 0.45rem;
+  }
+  .index-item-name { font-size: 0.8rem; }
+  .index-card-grid-gem .index-item-card { min-height: 158px; }
+  .index-card-grid-gem .index-item-name { font-size: 0.68rem; }
 }
 @media (prefers-reduced-motion: no-preference) {
   button, .index-item-card {
