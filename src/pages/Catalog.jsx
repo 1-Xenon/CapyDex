@@ -3,7 +3,7 @@ import { api } from '../lib/api.js';
 
 const CATEGORIES = ['adventurer', 'hero', 'brand', 'equipment', 'gem', 'pet', 'pet_armament', 'mount', 'artifact', 'mythic_treasure'];
 const SORTED_CATEGORIES = [...CATEGORIES].sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b)));
-const RARITY_ORDER = ['Common', 'Great', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Immortal', 'Arcana', 'Transcendent', 'Peerless'];
+const RARITY_ORDER = ['Normal', 'Common', 'Fine', 'Great', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Immortal', 'Arcana', 'Transcendent', 'Peerless'];
 const IMAGE_FIELDS = ['image', 'image_id', 'imageId', 'icon', 'icon_id', 'iconId', 'sprite', 'sprite_id', 'spriteId'];
 const GEM_CARD_IMAGE_ID = 'gem_rarity_peerless';
 const GEM_RARITY_IMAGE_IDS = {
@@ -28,11 +28,20 @@ const RARITY_CARD_COLORS = {
   Transcendent: '#4928ED',
   Peerless: '#35E69E',
 };
+const PEERLESS_DEFAULT_CATEGORIES = new Set(['gem']);
 
 function itemRarity(item) {
   const value = item.rarity || item.rarity_or_quality || '';
+  if (item.category === 'pet' && value === 'Common') return 'Normal';
+  if (item.category === 'pet' && value === 'Great') return 'Fine';
   if (['pet', 'pet_armament', 'mount', 'artifact'].includes(item.category) && value === 'Arcana') return 'Transcendent';
   return value === 'Quality-dependent' ? '' : value;
+}
+
+function itemCardRarity(item) {
+  const rarity = itemRarity(item);
+  if (rarity) return rarity;
+  return PEERLESS_DEFAULT_CATEGORIES.has(item.category) ? 'Peerless' : '';
 }
 
 function rarityCardStyle(rarity) {
@@ -398,11 +407,12 @@ function ItemCardGrid({ items, routeItems = items, category, routeTarget, setRou
       <div className={`index-card-grid index-card-grid-${category}`}>
         {items.map((item, index) => {
           const rarity = itemRarity(item);
+          const cardRarity = itemCardRarity(item);
           return (
             <button
               type="button"
-              className={`index-item-card ${rarityClassName(rarity)}`}
-              style={rarityCardStyle(rarity)}
+              className={`index-item-card ${rarityClassName(cardRarity)}`}
+              style={rarityCardStyle(cardRarity)}
               key={`${item.category}_${item.name}_${index}`}
               onClick={() => selectItem(item)}
             >

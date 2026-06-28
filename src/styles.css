@@ -276,6 +276,17 @@ input:focus, select:focus, textarea:focus {
     linear-gradient(150deg, #2860e3 10%, #a436ef) padding-box,
     linear-gradient(135deg, #a7fefe, #f08ff4) border-box;
 }
+.index-item-card-rarity-peerless {
+  background:
+    linear-gradient(150deg, #46af36 10%, #42b39f) padding-box,
+    linear-gradient(135deg, #97fcb0, #7afff1) border-box;
+}
+.index-item-card-rarity-peerless:hover {
+  border-color: transparent;
+  background:
+    linear-gradient(150deg, #46af36 10%, #42b39f) padding-box,
+    linear-gradient(135deg, #97fcb0, #7afff1) border-box;
+}
 .index-item-name {
   display: block;
   width: 100%;
