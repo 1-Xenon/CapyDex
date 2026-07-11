@@ -7,6 +7,8 @@ function basePath() {
   return import.meta.env.BASE_URL.replace(/\/$/, '');
 }
 
+const ACTIVE_PAGE_SESSION_KEY = 'capydex-active-page';
+
 function pageFromPath() {
   if (typeof window === 'undefined') return 'home';
 
@@ -18,6 +20,10 @@ function pageFromPath() {
 
   if (pathname === '/changelog') return 'changelog';
   if (pathname === '/index' || /^\/[^/=]+=[^/]+$/.test(pathname) || window.location.search) return 'index';
+  if (pathname === '/') {
+    const savedPage = window.sessionStorage.getItem(ACTIVE_PAGE_SESSION_KEY);
+    if (['home', 'index', 'changelog'].includes(savedPage)) return savedPage;
+  }
   return 'home';
 }
 
@@ -37,6 +43,10 @@ export default function App() {
   const [tab, setTab] = useState(() => pageFromPath());
 
   useEffect(() => {
+    window.sessionStorage.setItem(ACTIVE_PAGE_SESSION_KEY, tab);
+  }, [tab]);
+
+  useEffect(() => {
     function syncTabFromPath() {
       setTab(pageFromPath());
     }
@@ -48,6 +58,7 @@ export default function App() {
   function changeTab(nextTab) {
     setTab(nextTab);
     if (typeof window !== 'undefined') {
+      window.sessionStorage.setItem(ACTIVE_PAGE_SESSION_KEY, nextTab);
       window.history.pushState(null, '', pagePath(nextTab));
       window.scrollTo({ top: 0 });
     }

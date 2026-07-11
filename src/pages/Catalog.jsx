@@ -3,7 +3,17 @@ import { api } from '../lib/api.js';
 
 const CATEGORIES = ['adventurer', 'hero', 'brand', 'equipment', 'gem', 'pet', 'pet_armament', 'mount', 'artifact', 'collectible', 'mythic_treasure'];
 const SORTED_CATEGORIES = [...CATEGORIES].sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b)));
-const RARITY_ORDER = ['Normal', 'Common', 'Fine', 'Great', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Immortal', 'Arcana', 'Transcendent', 'S', 'SS', 'Peerless'];
+const ACTIVE_CATEGORY_SESSION_KEY = 'capydex-active-category';
+const RARITY_ORDER = ['Normal', 'Common', 'Fine', 'Great', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Immortal', 'Arcana', 'Transcendent', 'S', 'Non-S', 'SS', 'Peerless'];
+const BRAND_RARITY_ORDER = ['SS', 'S', 'Non-S'];
+const EQUIPMENT_TYPE_LABELS = {
+  Weapon: 'Weapon',
+  Cloth: 'Armor',
+  'Armor / Cloth': 'Armor',
+  Ring: 'Ring',
+  Accessory: 'Accessories',
+};
+const EQUIPMENT_TYPE_ORDER = ['Weapon', 'Cloth', 'Armor / Cloth', 'Ring', 'Accessory'];
 const IMAGE_FIELDS = ['image', 'image_id', 'imageId', 'icon', 'icon_id', 'iconId', 'sprite', 'sprite_id', 'spriteId'];
 const GEM_CARD_IMAGE_ID = 'gem_rarity_peerless';
 const GEM_RARITY_IMAGE_IDS = {
@@ -18,7 +28,7 @@ const GEM_RARITY_IMAGE_IDS = {
   Peerless: 'gem_rarity_peerless',
 };
 const RARITY_CARD_COLORS = {
-  Normal: '#D9D8F0',
+  Normal: '#C5C4DC',
   Fine: '#48C048',
   Rare: '#58B0F0',
   Epic: '#A860F8',
@@ -28,7 +38,6 @@ const RARITY_CARD_COLORS = {
   Transcendent: '#4928ED',
   Peerless: '#35E69E',
 };
-const PEERLESS_DEFAULT_CATEGORIES = new Set(['gem']);
 const S_EQUIPMENT_NAMES = new Set([
   'Angel Bow',
   'Bishop Staff',
@@ -75,11 +84,10 @@ function itemRarity(item) {
 function itemCardRarity(item) {
   if (hasTranscendentEquipmentSkill(item)) return 'Transcendent';
   if (isSEquipment(item)) return 'Mythic';
-  if (item.category === 'equipment' && !item.rarity && !item.rarity_or_quality) return '';
 
   const rarity = itemRarity(item);
   if (rarity) return rarity;
-  return PEERLESS_DEFAULT_CATEGORIES.has(item.category) ? 'Peerless' : '';
+  return '';
 }
 
 function rarityCardStyle(rarity) {
@@ -266,7 +274,7 @@ function EquipSkillEffects({ skills = [], showHeading = true }) {
       <div className="rarity-effect-list">
         {skills.map((skill, index) => (
           <div className="rarity-effect-row" key={`${skill.title}_${index}`}>
-            <strong className="rarity-effect-title">{skill.title}</strong>
+            <strong className="rarity-effect-title">Level {index + 1}</strong>
             <p>{skill.description || 'No visible player-facing description linked.'}</p>
           </div>
         ))}
@@ -315,14 +323,21 @@ function GemRarityEffects({ effects = [] }) {
 
   return (
     <div className="rarity-effect-list">
-      {effects.map((effect) => (
-        <div className="rarity-effect-row" key={`${effect.rarity}_${effect.description}`}>
-          <strong className="rarity-effect-title gem-rarity-effect-title">
-            <GemRarityLabel rarity={effect.rarity} />
-          </strong>
-          <p>{boldPercentValues(effect.description || 'No visible player-facing description linked.')}</p>
-        </div>
-      ))}
+      {effects.map((effect) => {
+        const rarityColor = RARITY_CARD_COLORS[effect.rarity];
+        return (
+          <div
+            className={`rarity-effect-row${rarityColor ? ' rarity-effect-row-shaded' : ''}`}
+            style={rarityColor ? { '--rarity-effect-color': rarityColor } : undefined}
+            key={`${effect.rarity}_${effect.description}`}
+          >
+            <strong className="rarity-effect-title gem-rarity-effect-title">
+              <GemRarityLabel rarity={effect.rarity} />
+            </strong>
+            <p>{boldPercentValues(effect.description || 'No visible player-facing description linked.')}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -434,9 +449,7 @@ function highlightSkillUpgrade(description, previousDescription, persistentHighl
     } else {
       const [, number = value, unit = ''] = value.match(SKILL_NUMBER_PATTERN) || [];
       output.push(
-        <React.Fragment key={`${normalized}_${index}`}>
-          <strong className="upgrade-value-change">{number}</strong>{unit}
-        </React.Fragment>
+        <strong className="upgrade-value-change" key={`${normalized}_${index}`}>{number}{unit}</strong>
       );
     }
 
@@ -1043,28 +1056,84 @@ function MythicTreasureBaseStats({ stats }) {
 }
 
 function MythicTreasureEquipmentEffects({ effects = [] }) {
-  if (!effects.length) return null;
+  if (!effects.length) return <p className="muted">No Mythic Treasure equipment effects are linked for this item yet.</p>;
 
   return (
-    <div className="equip-skill-section">
-      <strong className="equip-skill-heading">Equipment Effect:</strong>
-      <div className="mythic-stat-table-wrap mythic-effect-table-wrap">
-        <table className="mythic-stat-table mythic-effect-table">
-          <thead>
-            <tr>
-              <th scope="col">Star</th>
-              <th scope="col">Equipment Effect</th>
+    <div className="mythic-stat-table-wrap mythic-effect-table-wrap">
+      <table className="mythic-stat-table mythic-effect-table">
+        <thead>
+          <tr>
+            <th scope="col">Star</th>
+            <th scope="col">Equipment Effect</th>
+          </tr>
+        </thead>
+        <tbody>
+          {effects.map((effect) => (
+            <tr key={`mythic_equipment_effect_${effect.star}`}>
+              <th scope="row">{effect.star}★</th>
+              <td>{effect.description}</td>
             </tr>
-          </thead>
-          <tbody>
-            {effects.map((effect) => (
-              <tr key={`mythic_equipment_effect_${effect.star}`}>
-                <th scope="row">{effect.star}★</th>
-                <td>{effect.description}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function MythicTreasureDetailTabs({ item }) {
+  const [selectedTab, setSelectedTab] = useState('stats');
+  const idPrefix = `${item.category}-${itemSlug(item.name)}-details`;
+  const tabs = [
+    { id: 'stats', label: 'Stat Table' },
+    { id: 'effect', label: 'Equip Effect' },
+  ];
+
+  function selectTab(tabId, moveFocus = false) {
+    setSelectedTab(tabId);
+    if (moveFocus) {
+      window.requestAnimationFrame(() => document.getElementById(`${idPrefix}-${tabId}-tab`)?.focus());
+    }
+  }
+
+  function handleTabKeyDown(event) {
+    const currentIndex = tabs.findIndex((tab) => tab.id === selectedTab);
+    let nextIndex = currentIndex;
+
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    selectTab(tabs[nextIndex].id, true);
+  }
+
+  return (
+    <div className="skill-tabs">
+      <div className="skill-tab-list" role="tablist" aria-label={`${item.name} Mythic Treasure details`} onKeyDown={handleTabKeyDown}>
+        {tabs.map((tab) => {
+          const selected = selectedTab === tab.id;
+          return (
+            <button
+              type="button"
+              role="tab"
+              className={`skill-tab${selected ? ' active' : ''}`}
+              id={`${idPrefix}-${tab.id}-tab`}
+              aria-selected={selected}
+              aria-controls={`${idPrefix}-${tab.id}-panel`}
+              tabIndex={selected ? 0 : -1}
+              key={tab.id}
+              onClick={() => selectTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="skill-tab-panel" role="tabpanel" id={`${idPrefix}-${selectedTab}-panel`} aria-labelledby={`${idPrefix}-${selectedTab}-tab`}>
+        {selectedTab === 'stats' ? <MythicTreasureBaseStats stats={item.extra?.mythic_treasure_base_stats} /> : null}
+        {selectedTab === 'effect' ? <MythicTreasureEquipmentEffects effects={item.extra?.mythic_treasure_equipment_effects || []} /> : null}
       </div>
     </div>
   );
@@ -1078,16 +1147,7 @@ function MythicTreasureCatalog({ items, routeItems, routeTarget, setRouteTarget 
       category="mythic_treasure"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
-      renderDetail={(item) => {
-        const baseStats = item.extra?.mythic_treasure_base_stats;
-        const equipmentEffects = item.extra?.mythic_treasure_equipment_effects || [];
-        return (
-          <>
-            <MythicTreasureBaseStats stats={baseStats} />
-            <MythicTreasureEquipmentEffects effects={equipmentEffects} />
-          </>
-        );
-      }}
+      renderDetail={(item) => <MythicTreasureDetailTabs key={item.name} item={item} />}
     />
   );
 }
@@ -1160,7 +1220,12 @@ function CatalogTable({ category, items, routeItems, routeTarget, setRouteTarget
 
 export default function Index() {
   const [routeTarget, setRouteTarget] = useState(() => parseItemRoute());
-  const [category, setCategory] = useState(() => parseItemRoute()?.category || 'adventurer');
+  const [category, setCategory] = useState(() => {
+    const routeCategory = parseItemRoute()?.category;
+    if (routeCategory) return routeCategory;
+    const savedCategory = window.sessionStorage.getItem(ACTIVE_CATEGORY_SESSION_KEY);
+    return CATEGORIES.includes(savedCategory) ? savedCategory : 'adventurer';
+  });
   const [q, setQ] = useState('');
   const [excludedRarities, setExcludedRarities] = useState(() => new Set());
   const [equipmentType, setEquipmentType] = useState('');
@@ -1189,6 +1254,10 @@ export default function Index() {
   }, []);
 
   useEffect(() => {
+    window.sessionStorage.setItem(ACTIVE_CATEGORY_SESSION_KEY, category);
+  }, [category]);
+
+  useEffect(() => {
     api.catalog({ category, q }).then((data) => setItems(data.items || [])).catch((error) => setMessage(error.message));
   }, [category, q]);
 
@@ -1199,34 +1268,35 @@ export default function Index() {
 
   const rarityOptions = useMemo(() => {
     const values = [...new Set(items.map(itemRarity).filter(Boolean))];
+    const rarityOrder = category === 'brand' ? BRAND_RARITY_ORDER : RARITY_ORDER;
     return values.sort((a, b) => {
-      const aRank = RARITY_ORDER.indexOf(a);
-      const bRank = RARITY_ORDER.indexOf(b);
+      const aRank = rarityOrder.indexOf(a);
+      const bRank = rarityOrder.indexOf(b);
       if (aRank === -1 && bRank === -1) return String(a).localeCompare(String(b));
       if (aRank === -1) return 1;
       if (bRank === -1) return -1;
       return aRank - bRank;
     });
-  }, [items]);
+  }, [category, items]);
 
   const equipmentTypeOptions = useMemo(() => {
-    if (category !== 'gem') return [];
-    return [...new Set(items.map((item) => item.subtype).filter(Boolean))]
-      .sort((a, b) => String(a).localeCompare(String(b)));
+    if (!['equipment', 'gem'].includes(category)) return [];
+    const values = [...new Set(items.map((item) => item.subtype).filter(Boolean))];
+    return values.sort((a, b) => EQUIPMENT_TYPE_ORDER.indexOf(a) - EQUIPMENT_TYPE_ORDER.indexOf(b));
   }, [category, items]);
 
   const displayItems = useMemo(() => {
     const filtered = items.filter((item) => {
       if (excludedRarities.has(itemRarity(item))) return false;
-      if (category === 'gem' && equipmentType && item.subtype !== equipmentType) return false;
+      if (['equipment', 'gem'].includes(category) && equipmentType && item.subtype !== equipmentType) return false;
       return true;
     });
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
   }, [category, equipmentType, excludedRarities, items]);
 
-  const countText = useMemo(() => `${displayItems.length} item${displayItems.length === 1 ? '' : 's'}`, [displayItems]);
   const hasRarity = rarityOptions.length > 0;
   const hasEquipmentType = equipmentTypeOptions.length > 0;
+  const hasEquipmentTypeToggle = ['equipment', 'gem'].includes(category) && hasEquipmentType;
 
   function changeCategory(nextCategory) {
     setCategory(nextCategory);
@@ -1250,10 +1320,9 @@ export default function Index() {
           <div className="eyebrow"><span />Browse the archive</div>
           <h1>The Index</h1>
         </div>
-        <span className="pill">{countText}</span>
       </div>
       <section className="panel">
-        <div className={`grid index-filter-grid${hasEquipmentType ? ' has-equipment-filter' : ''}`}>
+        <div className="grid index-filter-grid">
           <label className="field index-filter-control">
             <span className="index-filter-control-header"><strong>Category</strong></span>
             <select value={category} onChange={(event) => changeCategory(event.target.value)}>{SORTED_CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select>
@@ -1262,26 +1331,38 @@ export default function Index() {
             <span className="index-filter-control-header"><strong>Search</strong></span>
             <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name of item..." />
           </label>
-          {hasRarity ? (
+          {hasRarity || hasEquipmentTypeToggle ? (
             <fieldset className="field rarity-filter">
-              <legend className="rarity-filter-legend">Rarity</legend>
-              <div className="rarity-filter-header">
-                <strong>Rarity</strong>
-                <button type="button" className="rarity-filter-reset" disabled={excludedRarities.size === 0} onClick={() => setExcludedRarities(new Set())}>Show all</button>
-              </div>
-              <div className="rarity-toggle-list">
-                {rarityOptions.map((value) => {
-                  const isIncluded = !excludedRarities.has(value);
-                  return <button type="button" className="rarity-toggle" aria-pressed={isIncluded} key={value} onClick={() => toggleRarity(value)}>{value}</button>;
-                })}
-              </div>
+              <legend className="rarity-filter-legend">Filters</legend>
+              {hasRarity ? (
+                <>
+                  <div className="rarity-filter-header">
+                    <strong>Rarity</strong>
+                    <button type="button" className="rarity-filter-reset" disabled={excludedRarities.size === 0} onClick={() => setExcludedRarities(new Set())}>Show all</button>
+                  </div>
+                  <div className="rarity-toggle-list">
+                    {rarityOptions.map((value) => {
+                      const isIncluded = !excludedRarities.has(value);
+                      return <button type="button" className="rarity-toggle" aria-pressed={isIncluded} key={value} onClick={() => toggleRarity(value)}>{value}</button>;
+                    })}
+                  </div>
+                </>
+              ) : null}
+              {hasEquipmentTypeToggle ? (
+                <div className={`equipment-type-toggle-group${hasRarity ? '' : ' equipment-type-toggle-group-standalone'}`}>
+                  <div className="rarity-filter-header">
+                    <strong>Equipment Type</strong>
+                    <button type="button" className="rarity-filter-reset" disabled={!equipmentType} onClick={() => setEquipmentType('')}>Show all</button>
+                  </div>
+                  <div className="rarity-toggle-list">
+                    {equipmentTypeOptions.map((value) => {
+                      const isIncluded = !equipmentType || equipmentType === value;
+                      return <button type="button" className="rarity-toggle" aria-pressed={isIncluded} key={value} onClick={() => setEquipmentType(equipmentType === value ? '' : value)}>{EQUIPMENT_TYPE_LABELS[value] || value}</button>;
+                    })}
+                  </div>
+                </div>
+              ) : null}
             </fieldset>
-          ) : null}
-          {hasEquipmentType ? (
-            <label className="field index-filter-control">
-              <span className="index-filter-control-header"><strong>Equipment</strong></span>
-              <select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All Equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>
-            </label>
           ) : null}
         </div>
       </section>

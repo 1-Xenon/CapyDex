@@ -23,6 +23,7 @@
   --border: rgba(157, 169, 160, 0.28);
   --border-strong: rgba(211, 198, 170, 0.36);
   --text: var(--fg);
+  --description-text: #e7e1d1;
   --muted: var(--grey2);
   --accent: var(--green);
   --accent-2: var(--aqua);
@@ -259,6 +260,16 @@ main {
 .rarity-toggle[aria-pressed="true"] { border-color: var(--green); color: var(--fg); background: var(--bg-green); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--green) 25%, transparent); }
 .rarity-toggle[aria-pressed="true"]::before { color: var(--green); content: "✓"; }
 .rarity-toggle[aria-pressed="false"] { opacity: 0.68; }
+.equipment-type-toggle-group {
+  margin-top: 0.85rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.equipment-type-toggle-group-standalone {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
 
 input, select, textarea {
   width: 100%;
@@ -325,7 +336,7 @@ input:focus, select:focus, textarea:focus {
 .star-effect-copy strong { display: block; margin-bottom: 0.2rem; }
 .star-effect-copy p {
   margin: 0.2rem 0 0;
-  color: var(--muted);
+  color: var(--description-text);
   line-height: 1.45;
 }
 .rarity-effect-row {
@@ -351,7 +362,7 @@ input:focus, select:focus, textarea:focus {
 }
 .rarity-effect-row p {
   margin: 0;
-  color: var(--muted);
+  color: var(--description-text);
   line-height: 1.5;
   white-space: pre-line;
 }
@@ -414,6 +425,16 @@ input:focus, select:focus, textarea:focus {
     linear-gradient(135deg, var(--rarity-card-border-color, var(--green)), var(--rarity-card-border-color)) border-box;
   box-shadow: 0 18px 42px rgba(13, 18, 20, 0.34);
   filter: brightness(1.05);
+}
+.index-card-grid-hero .index-item-card,
+.index-card-grid-brand .index-item-card,
+.index-card-grid-gem .index-item-card {
+  --rarity-card-border-color: color-mix(in srgb, var(--green) 58%, var(--fg));
+}
+.index-card-grid-hero .index-item-card:hover,
+.index-card-grid-brand .index-item-card:hover,
+.index-card-grid-gem .index-item-card:hover {
+  --rarity-card-border-color: color-mix(in srgb, var(--green) 78%, white);
 }
 .index-item-card-rarity-transcendent {
   border: 5px solid transparent;
@@ -594,9 +615,17 @@ input:focus, select:focus, textarea:focus {
 }
 .skill-tab-panel .equip-skill-section { margin-top: 0; }
 .upgrade-value-change {
-  color: var(--fg);
+  display: inline-block;
+  margin: 0 0.08em;
+  padding: 0.02em 0.3em;
+  border: 1px solid color-mix(in srgb, var(--yellow) 72%, white);
+  border-radius: 5px;
+  color: #24271f;
+  background: linear-gradient(180deg, #ead09a, var(--yellow));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.22) inset, 0 2px 6px rgba(13, 18, 20, 0.22);
   font-weight: 900;
   font-variant-numeric: tabular-nums;
+  line-height: 1.25;
 }
 .index-modal .rarity-effect-row,
 .index-modal .star-effect-row {

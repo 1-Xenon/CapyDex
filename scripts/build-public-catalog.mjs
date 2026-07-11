@@ -39,6 +39,53 @@ const IMAGE_FIELDS = [
 
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 const normalizeName = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+const sHeroNames = new Set([
+  "April O'Neil",
+  'Bone King',
+  'Dark Knight',
+  'Flame-Heart Succubus',
+  'Ghost Princess',
+  'Judgement Reaper',
+  'Knight of the End',
+  'Legendary Ranger',
+  'Splinter',
+  'Spring Orchid'
+].map(normalizeName));
+const excludedBrandNames = new Set([
+  'Bonelet',
+  'Crybaby',
+  'Ghost Doll',
+  'Legendary Knight',
+  'Little Knight',
+  'Scout',
+  'Skeleton Lord',
+  'Windstrider'
+].map(normalizeName));
+const ssBrandNames = new Set([
+  'Alien UFO',
+  'Brutal Wild Vulture',
+  'Cleopatra',
+  'Frankenstein',
+  'Naga Siren',
+  'Ootengu',
+  'Prince of Sanctuary',
+  'Mechanical Magic Eye',
+  'Silly Sorcerer',
+  'Thousand-Change Demon Eye',
+  'White Robe Wizard',
+  'White Tiger'
+].map(normalizeName));
+const sBrandNames = new Set([
+  'Fantasy Joker',
+  'Lava Giant',
+  'Mecha Titan',
+  'Phantom Assassin',
+  'Skeleton Spellblade',
+  'Stone Guardian',
+  'Undead Swordsman',
+  'Wild Vulture',
+  'Wise Archdemon'
+].map(normalizeName));
 const collectibleRarities = new Map(
   Object.entries({
     Mythic: [
@@ -149,6 +196,7 @@ function compactExtra(item) {
 
 function isPublicCatalogItem(item) {
   if (!categories.has(item.category)) return false;
+  if (item.category === 'brand' && excludedBrandNames.has(normalizeName(item.name))) return false;
   if (item.category !== 'collectible') return true;
 
   const override = collectibleOverridesByRawId.get(Number(item.raw_id));
@@ -178,7 +226,11 @@ const items = source.items
 
     const rarity = item.category === 'collectible'
       ? collectibleRarities.get(normalizeName(name))
-      : item.rarity || item.rarity_or_quality;
+      : item.category === 'hero'
+        ? (sHeroNames.has(normalizeName(name)) ? 'S' : 'Non-S')
+        : item.category === 'brand'
+          ? (ssBrandNames.has(normalizeName(name)) ? 'SS' : sBrandNames.has(normalizeName(name)) ? 'S' : 'Non-S')
+        : item.rarity || item.rarity_or_quality;
     if (rarity) output.rarity = rarity;
 
     if (item.subtype) output.subtype = item.subtype;
