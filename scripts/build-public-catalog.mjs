@@ -133,6 +133,12 @@ const compactEffects = (effects) =>
     compactObject(effect, ['rarity', 'star', 'title', 'description', 'source_text'])
   );
 
+const compactGemEffects = (effects) => {
+  const hasVisibleEffect = (effect) => String(effect?.description || '').trim() !== 'No visible effect at this rarity.';
+  if (Array.isArray(effects)) return compactEffects(effects.filter(hasVisibleEffect));
+  return hasVisibleEffect(effects) ? compactEffects(effects) : [];
+};
+
 const compactCollectibleEffects = (effects) =>
   compactMaybeList(effects, (effect) => ({
     star: effect.star,
@@ -175,7 +181,7 @@ function compactExtra(item) {
   if (hasOwn(extra, 'equipment_equip_skills')) output.equipment_equip_skills = compactEffects(extra.equipment_equip_skills);
   if (hasOwn(extra, 'equipment_arcana_name')) output.equipment_arcana_name = extra.equipment_arcana_name;
   if (hasOwn(extra, 'equipment_arcana_star_upgrades')) output.equipment_arcana_star_upgrades = compactEffects(extra.equipment_arcana_star_upgrades);
-  if (hasOwn(extra, 'gem_rarity_effects')) output.gem_rarity_effects = compactEffects(extra.gem_rarity_effects);
+  if (hasOwn(extra, 'gem_rarity_effects')) output.gem_rarity_effects = compactGemEffects(extra.gem_rarity_effects);
   if (hasOwn(extra, 'pet_battle_skill_levels')) output.pet_battle_skill_levels = compactLevels(extra.pet_battle_skill_levels);
   if (hasOwn(extra, 'pet_arcana_name')) output.pet_arcana_name = extra.pet_arcana_name;
   if (hasOwn(extra, 'evolved_name')) output.evolved_name = extra.evolved_name;
