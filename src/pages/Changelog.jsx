@@ -30,7 +30,6 @@ export default function Changelog() {
         <div>
           <h1>Changelog</h1>
         </div>
-        <span className="pill">{UPDATES.length} updates</span>
       </div>
 
       <section className="changelog-list" aria-label="Index changelog">

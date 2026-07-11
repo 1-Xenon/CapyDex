@@ -1,7 +1,7 @@
 let catalogPromise;
 
 function loadCatalog() {
-  catalogPromise ||= fetch(`${import.meta.env.BASE_URL}data/catalog.json`).then((response) => {
+  catalogPromise ||= fetch(`${import.meta.env.BASE_URL}data/catalog.json`, { cache: 'no-store' }).then((response) => {
     if (!response.ok) throw new Error(`Unable to load Index data: ${response.status}`);
     return response.json();
   });

@@ -21,6 +21,7 @@ const categories = new Set([
   'pet_armament',
   'mount',
   'artifact',
+  'collectible',
   'mythic_treasure'
 ]);
 
@@ -37,6 +38,35 @@ const IMAGE_FIELDS = [
 ];
 
 const hasOwn = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
+const normalizeName = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+const collectibleRarities = new Map(
+  Object.entries({
+    Mythic: [
+      "Aladdin's Lamp", 'Windwalker Boots', 'Sword in the Stone', "Saint's Relic", 'Giant Slayer',
+      'King of the Salty Fish', 'Mysterious Egg', 'Wave-Treading Dragon Boat', 'Summer Good Coconut',
+      '1st Anniversary Cake', 'Candy Gacha Machine', 'Sapling', 'Fragrant Boat', 'Hydra Poison Arrow',
+      'Pizza', 'Mystic Dice', 'Egg Yolk Mooncake', 'Ceramics Horse'
+    ],
+    Legendary: [
+      "Challenger's Badge", 'Iron Throne', "Mage's Bane", 'Heroic Brooch', 'Aegis Shield',
+      '"Lucky Four-Leaf Clover"', 'Hungry Eye', 'Blade Armor', 'Horn of Plenty', 'Royal Roses',
+      'Origin Staff', 'Eternal Lance', "Gladiator's Helm", 'Treasure Compass', 'Golden Apple',
+      'Pot of Treasure', "Lion King's Shield", 'Lucky Rabbit Foot', "Flame's Delight", 'Oceanic Trident',
+      'Darkmoon Card', 'Golden Armor', 'Sacred Anvil'
+    ],
+    Epic: [
+      'Petals of Hope', "Frost Giant's Hand", "Keats' Ghost Ship", 'Infinite Blade', "Giant's Heart",
+      "Devil's Blood", 'Forbidden Knowledge', "Titan's Sword", 'Destruction Hat'
+    ],
+    Rare: ["Alchemist's Lamp", 'Eternal Torch', 'Star Shard', 'Arcane Cloak', 'Holy Grail', 'Golden Hourglass']
+  }).flatMap(([rarity, names]) => names.map((name) => [normalizeName(name), rarity]))
+);
+
+const collectibleOverridesByRawId = new Map([
+  [351005, { name: 'Holy Grail', image_id: 'icon_351005' }],
+  [358012, { name: 'Sapling', image_id: 'icon_358012' }],
+  [358013, { name: 'Fragrant Boat', image_id: 'icon_358013' }]
+]);
 
 const compactObject = (object, keys) =>
   Object.fromEntries(
@@ -56,9 +86,21 @@ const compactEffects = (effects) =>
     compactObject(effect, ['rarity', 'star', 'title', 'description', 'source_text'])
   );
 
+const compactCollectibleEffects = (effects) =>
+  compactMaybeList(effects, (effect) => ({
+    star: effect.star,
+    description: effect.description,
+    cumulative_effects: compactMaybeList(effect.cumulative_effects || [], (value) =>
+      compactObject(value, ['stat', 'value', 'unit', 'formatted_value'])
+    ),
+    additional_star_effects: compactMaybeList(effect.additional_star_effects || [], (value) =>
+      compactObject(value, ['stat', 'value', 'unit', 'formatted_value'])
+    )
+  }));
+
 const compactLevels = (levels) =>
   compactMaybeList(levels, (level) =>
-    compactObject(level, ['level', 'skill_name', 'awakening_star', 'description'])
+    compactObject(level, ['level', 'skill_name', 'awakening_star', 'description', 'upgrade_description'])
   );
 
 const compactMythicStats = (stats) => {
@@ -98,26 +140,51 @@ function compactExtra(item) {
   if (hasOwn(extra, 'mount_skill_levels')) output.mount_skill_levels = compactLevels(extra.mount_skill_levels);
   if (hasOwn(extra, 'artifact_active_skill_levels')) output.artifact_active_skill_levels = compactLevels(extra.artifact_active_skill_levels);
   if (hasOwn(extra, 'artifact_deploy_skill_levels')) output.artifact_deploy_skill_levels = compactLevels(extra.artifact_deploy_skill_levels);
+  if (hasOwn(extra, 'collectible_star_effects')) output.collectible_star_effects = compactCollectibleEffects(extra.collectible_star_effects);
   if (hasOwn(extra, 'mythic_treasure_base_stats')) output.mythic_treasure_base_stats = compactMythicStats(extra.mythic_treasure_base_stats);
   if (hasOwn(extra, 'mythic_treasure_equipment_effects')) output.mythic_treasure_equipment_effects = compactMythicEffects(extra.mythic_treasure_equipment_effects);
 
   return output;
 }
 
+function isPublicCatalogItem(item) {
+  if (!categories.has(item.category)) return false;
+  if (item.category !== 'collectible') return true;
+
+  const override = collectibleOverridesByRawId.get(Number(item.raw_id));
+  const name = override?.name || item.name;
+  const imageId = override?.image_id || IMAGE_FIELDS
+    .map((field) => item[field] || item.extra?.[field])
+    .find(Boolean);
+
+  return Boolean(
+    collectibleRarities.has(normalizeName(name))
+    && imageId
+    && item.extra?.collectible_star_effects?.length
+    && (normalizeName(name) !== normalizeName('Holy Grail') || Number(item.raw_id) === 351005)
+  );
+}
+
 const items = source.items
-  .filter((item) => categories.has(item.category))
+  .filter(isPublicCatalogItem)
   .map((item) => {
-    const output = { category: item.category, name: item.name };
+    const collectibleOverride = item.category === 'collectible'
+      ? collectibleOverridesByRawId.get(Number(item.raw_id))
+      : null;
+    const name = collectibleOverride?.name || item.name;
+    const output = { category: item.category, name };
 
-    if (item.image_id) output.image_id = item.image_id;
+    if (collectibleOverride?.image_id || item.image_id) output.image_id = collectibleOverride?.image_id || item.image_id;
 
-    const rarity = item.rarity || item.rarity_or_quality;
+    const rarity = item.category === 'collectible'
+      ? collectibleRarities.get(normalizeName(name))
+      : item.rarity || item.rarity_or_quality;
     if (rarity) output.rarity = rarity;
 
     if (item.subtype) output.subtype = item.subtype;
 
     const imageField = IMAGE_FIELDS.find((field) => item[field] || item.extra?.[field]);
-    if (imageField) output.image_id = item[imageField] || item.extra?.[imageField];
+    if (!collectibleOverride?.image_id && imageField) output.image_id = item[imageField] || item.extra?.[imageField];
 
     const extra = compactExtra(item);
     if (Object.keys(extra).length) output.extra = extra;

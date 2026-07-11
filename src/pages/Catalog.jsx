@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { api } from '../lib/api.js';
 
-const CATEGORIES = ['adventurer', 'hero', 'brand', 'equipment', 'gem', 'pet', 'pet_armament', 'mount', 'artifact', 'mythic_treasure'];
+const CATEGORIES = ['adventurer', 'hero', 'brand', 'equipment', 'gem', 'pet', 'pet_armament', 'mount', 'artifact', 'collectible', 'mythic_treasure'];
 const SORTED_CATEGORIES = [...CATEGORIES].sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b)));
-const RARITY_ORDER = ['Normal', 'Common', 'Fine', 'Great', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Immortal', 'Arcana', 'Transcendent', 'Peerless'];
+const RARITY_ORDER = ['Normal', 'Common', 'Fine', 'Great', 'Rare', 'Epic', 'Legendary', 'Mythic', 'Immortal', 'Arcana', 'Transcendent', 'S', 'SS', 'Peerless'];
 const IMAGE_FIELDS = ['image', 'image_id', 'imageId', 'icon', 'icon_id', 'iconId', 'sprite', 'sprite_id', 'spriteId'];
 const GEM_CARD_IMAGE_ID = 'gem_rarity_peerless';
 const GEM_RARITY_IMAGE_IDS = {
@@ -29,16 +29,54 @@ const RARITY_CARD_COLORS = {
   Peerless: '#35E69E',
 };
 const PEERLESS_DEFAULT_CATEGORIES = new Set(['gem']);
+const S_EQUIPMENT_NAMES = new Set([
+  'Angel Bow',
+  'Bishop Staff',
+  'Blade of Justice',
+  'Bloody Grail',
+  'Dragon Ball Ring',
+  "Dragon's Breath Armor",
+  'Durian Hammer',
+  'Judgment Ring',
+  'Mushroom Hammer',
+  'Proof of Glory',
+  "Reaper's Staff",
+  'Reckoning Badge',
+  'Revival Cape',
+  'Shadow Lance',
+  'Shadow Ring',
+  'Skyflame Ring',
+  'Skysplitter',
+  'Star Staff',
+  'Whisperer',
+]);
+
+function hasTranscendentEquipmentSkill(item) {
+  return item.category === 'equipment'
+    && (item.extra?.equipment_rarity_effects || []).some((effect) => ['Surpass', 'Transcendent'].includes(effect.rarity));
+}
+
+function isSEquipment(item) {
+  return item.category === 'equipment' && S_EQUIPMENT_NAMES.has(item.name);
+}
 
 function itemRarity(item) {
+  if (hasTranscendentEquipmentSkill(item)) return 'SS';
+  if (isSEquipment(item)) return 'S';
+
   const value = item.rarity || item.rarity_or_quality || '';
+  if (item.category === 'equipment' && !value) return 'Normal';
   if (item.category === 'pet' && value === 'Common') return 'Normal';
   if (item.category === 'pet' && value === 'Great') return 'Fine';
   if (['pet', 'pet_armament', 'mount', 'artifact'].includes(item.category) && value === 'Arcana') return 'Transcendent';
-  return value === 'Quality-dependent' ? '' : value;
+  return value === 'Quality-dependent' ? '' : String(value);
 }
 
 function itemCardRarity(item) {
+  if (hasTranscendentEquipmentSkill(item)) return 'Transcendent';
+  if (isSEquipment(item)) return 'Mythic';
+  if (item.category === 'equipment' && !item.rarity && !item.rarity_or_quality) return '';
+
   const rarity = itemRarity(item);
   if (rarity) return rarity;
   return PEERLESS_DEFAULT_CATEGORIES.has(item.category) ? 'Peerless' : '';
@@ -76,11 +114,11 @@ function basePath() {
 
 function itemRoutePath(item) {
   const params = new URLSearchParams({ [item.category]: itemSlug(item.name) });
-  return `${basePath()}/?${params.toString()}`;
+  return `${basePath()}/index?${params.toString()}`;
 }
 
 function indexRoutePath() {
-  return `${basePath()}/`;
+  return `${basePath()}/index`;
 }
 
 function parseItemRoute() {
@@ -172,9 +210,9 @@ function GemRarityLabel({ rarity }) {
   );
 }
 
-function AdventurerStarEffects({ effects = [] }) {
+function AdventurerStarEffects({ effects = [], emptyText = 'No star effects are linked for this Adventurer yet.' }) {
   if (!effects.length) {
-    return <p className="muted">No star effects are linked for this Adventurer yet.</p>;
+    return <p className="muted">{emptyText}</p>;
   }
 
   return (
@@ -193,29 +231,38 @@ function AdventurerStarEffects({ effects = [] }) {
   );
 }
 
-function RarityEffects({ effects = [], emptyText = 'No rarity effects are linked for this entry yet.' }) {
+function RarityEffects({ effects = [], emptyText = 'No rarity effects are linked for this entry yet.', shadeByRarity = false }) {
   if (!effects.length) {
     return <p className="muted">{emptyText}</p>;
   }
 
   return (
     <div className="rarity-effect-list">
-      {effects.map((effect) => (
-        <div className="rarity-effect-row" key={`${effect.rarity}_${effect.description}`}>
-          <strong className="rarity-effect-title">{effect.rarity}</strong>
-          <p>{effect.description || 'No visible player-facing description linked.'}</p>
-        </div>
-      ))}
+      {effects.map((effect) => {
+        const displayRarity = effect.rarity === 'Surpass' ? 'Transcendent' : effect.rarity;
+        const colorKey = effect.rarity === 'Uncommon' ? 'Fine' : displayRarity;
+        const rarityColor = RARITY_CARD_COLORS[colorKey];
+        return (
+          <div
+            className={`rarity-effect-row${shadeByRarity && rarityColor ? ' rarity-effect-row-shaded' : ''}`}
+            style={shadeByRarity && rarityColor ? { '--rarity-effect-color': rarityColor } : undefined}
+            key={`${effect.rarity}_${effect.description}`}
+          >
+            <strong className="rarity-effect-title">{displayRarity}</strong>
+            <p>{effect.description || 'No visible player-facing description linked.'}</p>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function EquipSkillEffects({ skills = [] }) {
-  if (!skills.length) return null;
+function EquipSkillEffects({ skills = [], showHeading = true }) {
+  if (!skills.length) return <p className="muted">No equip skills are linked for this equipment yet.</p>;
 
   return (
     <div className="equip-skill-section">
-      <strong className="equip-skill-heading">Equip Skill:</strong>
+      {showHeading ? <strong className="equip-skill-heading">Equip Skill:</strong> : null}
       <div className="rarity-effect-list">
         {skills.map((skill, index) => (
           <div className="rarity-effect-row" key={`${skill.title}_${index}`}>
@@ -231,16 +278,15 @@ function EquipSkillEffects({ skills = [] }) {
 function EquipmentArcanaStars({ item }) {
   const upgrades = item.extra?.equipment_arcana_star_upgrades || [];
   const arcanaName = item.extra?.equipment_arcana_name || '';
-  if (!upgrades.length && !arcanaName) return null;
+  if (!upgrades.length && !arcanaName) return <p className="muted">No Arcana effects are linked for this equipment yet.</p>;
 
   return (
     <div className="equip-skill-section">
-      <strong className="equip-skill-heading">Arcana / Statue Skill Effects{arcanaName ? `: ${arcanaName}` : ':'}</strong>
       {upgrades.length ? (
         <div className="rarity-effect-list">
           {upgrades.map((upgrade) => (
             <div className="rarity-effect-row" key={`${item.name}_equipment_arcana_${upgrade.star}`}>
-              <strong className="rarity-effect-title">Star {upgrade.star}</strong>
+              <strong className="rarity-effect-title">{upgrade.star}⭐</strong>
               <p>{upgrade.description || 'No new skill-effect upgrade linked.'}</p>
             </div>
           ))}
@@ -285,13 +331,14 @@ function PetBattleSkillLevels({ levels = [] }) {
   if (!levels.length) {
     return <p className="muted">No battle skill levels are linked for this pet yet.</p>;
   }
+  const persistentHighlightedValues = new Set();
 
   return (
     <div className="rarity-effect-list">
-      {levels.map((level) => (
+      {levels.map((level, index) => (
         <div className="rarity-effect-row" key={`${level.level}_${level.skill_id}`}>
           <strong className="rarity-effect-title">Level {level.level}</strong>
-          <p>{level.description || 'No visible battle skill description linked.'}</p>
+          <p>{highlightSkillUpgrade(level.description, levels[index - 1]?.description, persistentHighlightedValues) || 'No visible battle skill description linked.'}</p>
         </div>
       ))}
     </div>
@@ -305,12 +352,11 @@ function PetArcanaStars({ item }) {
 
   return (
     <div className="equip-skill-section">
-      <strong className="equip-skill-heading">Arcana / Pet Statue Skill Effects{arcanaName ? `: ${arcanaName}` : ':'}</strong>
       {upgrades.length ? (
         <div className="rarity-effect-list">
           {upgrades.map((upgrade) => (
             <div className="rarity-effect-row" key={`${item.name}_arcana_${upgrade.star}`}>
-              <strong className="rarity-effect-title">Star {upgrade.star}</strong>
+              <strong className="rarity-effect-title">{upgrade.star}⭐</strong>
               <p>{upgrade.description || 'No new skill-effect upgrade linked.'}</p>
             </div>
           ))}
@@ -354,24 +400,311 @@ function mountDeploySkillLabel(level) {
   return ({ 1: 'A0', 2: 'A2', 3: 'A4', 4: 'A7', 5: 'A10' })[level] || `Level ${level}`;
 }
 
-function MountSkillSection({ title, levels = [], itemType, labelForLevel }) {
+const SKILL_VALUE_PATTERN = /[+-]?\d[\d,]*(?:\.\d+)?(?:%|×|x)?(?:\s*(?:turns?|times?|hits?|stacks?|rounds?))?(?:\/(?:turn|round))?/gi;
+const SKILL_NUMBER_PATTERN = /^([+-]?\d[\d,]*(?:\.\d+)?(?:%|×|x)?)(.*)$/i;
+
+function normalizedSkillValue(value) {
+  return String(value).toLowerCase().replace(/^\+/, '').replace(/,/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function highlightSkillUpgrade(description, previousDescription, persistentHighlightedValues) {
+  if (!description || !previousDescription) return description;
+
+  const previousValues = new Map();
+  for (const value of String(previousDescription).match(SKILL_VALUE_PATTERN) || []) {
+    const normalized = normalizedSkillValue(value);
+    previousValues.set(normalized, (previousValues.get(normalized) || 0) + 1);
+  }
+
+  const output = [];
+  let cursor = 0;
+  for (const [index, match] of [...String(description).matchAll(SKILL_VALUE_PATTERN)].entries()) {
+    const value = match[0];
+    const start = match.index;
+    if (start > cursor) output.push(String(description).slice(cursor, start));
+
+    const normalized = normalizedSkillValue(value);
+    const remainingMatches = previousValues.get(normalized) || 0;
+    const changedAtThisLevel = remainingMatches === 0;
+    if (remainingMatches > 0) previousValues.set(normalized, remainingMatches - 1);
+    if (changedAtThisLevel) persistentHighlightedValues.add(normalized);
+
+    if (!changedAtThisLevel && !persistentHighlightedValues.has(normalized)) {
+      output.push(value);
+    } else {
+      const [, number = value, unit = ''] = value.match(SKILL_NUMBER_PATTERN) || [];
+      output.push(
+        <React.Fragment key={`${normalized}_${index}`}>
+          <strong className="upgrade-value-change">{number}</strong>{unit}
+        </React.Fragment>
+      );
+    }
+
+    cursor = start + value.length;
+  }
+
+  if (cursor < String(description).length) output.push(String(description).slice(cursor));
+  return output;
+}
+
+function normalizedSkillClause(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9%+.-]+/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function derivedUpgradeDescription(description, previousDescription) {
+  if (!description) return '';
+  if (!previousDescription) return description;
+  if (normalizedSkillClause(description) === normalizedSkillClause(previousDescription)) {
+    return 'No visible change is described for this level.';
+  }
+
+  const previous = normalizedSkillClause(previousDescription);
+  const changedClauses = String(description)
+    .split(/\n+|(?<=[.;])\s+|,\s+/)
+    .map((clause) => clause.trim())
+    .filter(Boolean)
+    .filter((clause) => !previous.includes(normalizedSkillClause(clause)));
+
+  return changedClauses.length ? changedClauses.join('; ') : description;
+}
+
+function MountSkillSection({ title, levels = [], itemType, labelForLevel, showHeading = true, conciseUpgrades = false }) {
+  const persistentHighlightedValues = new Set();
+
   return (
     <div className="equip-skill-section">
-      <strong className="equip-skill-heading">{title}:</strong>
+      {showHeading ? <strong className="equip-skill-heading">{title}:</strong> : null}
       {levels.length ? (
         <div className="rarity-effect-list">
-          {levels.map((level) => (
+          {levels.map((level, index) => (
             <div className="rarity-effect-row" key={`${title}_${level.level}_${level.skill_id}`}>
               <strong className="rarity-effect-title">
                 {labelForLevel(level.level)}{level.skill_name ? ` — ${level.skill_name}` : ''}
               </strong>
-              <p>{level.description || `No visible ${itemType} description linked.`}</p>
+              <p>
+                {(conciseUpgrades
+                  ? (index === 0
+                    ? level.description
+                    : level.upgrade_description || derivedUpgradeDescription(level.description, levels[index - 1]?.description))
+                  : highlightSkillUpgrade(level.description, levels[index - 1]?.description, persistentHighlightedValues))
+                  || `No visible ${itemType} description linked.`}
+              </p>
             </div>
           ))}
         </div>
       ) : (
         <p className="muted">No {title} levels are linked for this item yet.</p>
       )}
+    </div>
+  );
+}
+
+function ActiveDeploySkillTabs({ item, itemType, activeLevels, deployLevels }) {
+  const [selectedTab, setSelectedTab] = useState('active');
+  const rawRarity = item.rarity || item.rarity_or_quality || '';
+  const idPrefix = `${item.category}-${itemSlug(item.name)}-skill`;
+  const tabs = [
+    { id: 'active', label: 'Active Skill' },
+    { id: 'deploy', label: 'Deploy Skill' },
+  ];
+
+  function selectTab(tabId, moveFocus = false) {
+    setSelectedTab(tabId);
+    if (moveFocus) {
+      window.requestAnimationFrame(() => document.getElementById(`${idPrefix}-${tabId}-tab`)?.focus());
+    }
+  }
+
+  function handleTabKeyDown(event) {
+    const currentIndex = tabs.findIndex((tab) => tab.id === selectedTab);
+    let nextIndex = currentIndex;
+
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    selectTab(tabs[nextIndex].id, true);
+  }
+
+  return (
+    <div className="skill-tabs">
+      <div className="skill-tab-list" role="tablist" aria-label={`${item.name} ${itemType} skills`} onKeyDown={handleTabKeyDown}>
+        {tabs.map((tab) => {
+          const selected = selectedTab === tab.id;
+          return (
+            <button
+              type="button"
+              role="tab"
+              className={`skill-tab${selected ? ' active' : ''}`}
+              id={`${idPrefix}-${tab.id}-tab`}
+              aria-selected={selected}
+              aria-controls={`${idPrefix}-${tab.id}-panel`}
+              tabIndex={selected ? 0 : -1}
+              key={tab.id}
+              onClick={() => selectTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div
+        className="skill-tab-panel"
+        role="tabpanel"
+        id={`${idPrefix}-${selectedTab}-panel`}
+        aria-labelledby={`${idPrefix}-${selectedTab}-tab`}
+      >
+        {selectedTab === 'active' ? (
+          <MountSkillSection
+            title="Active Skill"
+            levels={activeLevels}
+            itemType="Active Skill"
+            labelForLevel={(level) => mountActiveSkillLabel(rawRarity, level)}
+            showHeading={false}
+          />
+        ) : (
+          <MountSkillSection
+            title="Deploy Skill"
+            levels={deployLevels}
+            itemType="Deploy Skill"
+            labelForLevel={mountDeploySkillLabel}
+            showHeading={false}
+            conciseUpgrades
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EquipmentDetailTabs({ item }) {
+  const [selectedTab, setSelectedTab] = useState('rarity');
+  const idPrefix = `${item.category}-${itemSlug(item.name)}-detail`;
+  const equipSkills = item.extra?.equipment_equip_skills || [];
+  const arcanaUpgrades = item.extra?.equipment_arcana_star_upgrades || [];
+  const hasArcana = Boolean(item.extra?.equipment_arcana_name) || arcanaUpgrades.length > 0;
+  const tabs = [
+    { id: 'rarity', label: 'Rarity Skill' },
+    equipSkills.length > 0 ? { id: 'equip', label: 'Equip Skill' } : null,
+    hasArcana ? { id: 'arcana', label: 'Arcana' } : null,
+  ].filter(Boolean);
+
+  function selectTab(tabId, moveFocus = false) {
+    setSelectedTab(tabId);
+    if (moveFocus) {
+      window.requestAnimationFrame(() => document.getElementById(`${idPrefix}-${tabId}-tab`)?.focus());
+    }
+  }
+
+  function handleTabKeyDown(event) {
+    const currentIndex = tabs.findIndex((tab) => tab.id === selectedTab);
+    let nextIndex = currentIndex;
+
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    selectTab(tabs[nextIndex].id, true);
+  }
+
+  return (
+    <div className="skill-tabs">
+      <div className={`skill-tab-list skill-tab-list-${tabs.length}`} role="tablist" aria-label={`${item.name} equipment details`} onKeyDown={handleTabKeyDown}>
+        {tabs.map((tab) => {
+          const selected = selectedTab === tab.id;
+          return (
+            <button
+              type="button"
+              role="tab"
+              className={`skill-tab${selected ? ' active' : ''}`}
+              id={`${idPrefix}-${tab.id}-tab`}
+              aria-selected={selected}
+              aria-controls={`${idPrefix}-${tab.id}-panel`}
+              tabIndex={selected ? 0 : -1}
+              key={tab.id}
+              onClick={() => selectTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="skill-tab-panel" role="tabpanel" id={`${idPrefix}-${selectedTab}-panel`} aria-labelledby={`${idPrefix}-${selectedTab}-tab`}>
+        {selectedTab === 'rarity' ? <RarityEffects effects={item.extra?.equipment_rarity_effects || []} shadeByRarity /> : null}
+        {selectedTab === 'equip' ? <EquipSkillEffects skills={equipSkills} showHeading={false} /> : null}
+        {selectedTab === 'arcana' ? <EquipmentArcanaStars item={item} /> : null}
+      </div>
+    </div>
+  );
+}
+
+function PetDetailTabs({ item }) {
+  const [selectedTab, setSelectedTab] = useState('skill');
+  const idPrefix = `${item.category}-${itemSlug(item.name)}-detail`;
+  const skillLevels = item.extra?.pet_battle_skill_levels || [];
+  const arcanaUpgrades = item.extra?.pet_arcana_star_upgrades || [];
+  const arcanaName = item.extra?.pet_arcana_name || item.extra?.evolved_name || item.extra?.pet_arcana_item_name || '';
+  const tabs = [
+    { id: 'skill', label: 'Pet Skill' },
+    arcanaUpgrades.length > 0 || arcanaName ? { id: 'arcana', label: 'Arcana' } : null,
+  ].filter(Boolean);
+
+  function selectTab(tabId, moveFocus = false) {
+    setSelectedTab(tabId);
+    if (moveFocus) {
+      window.requestAnimationFrame(() => document.getElementById(`${idPrefix}-${tabId}-tab`)?.focus());
+    }
+  }
+
+  function handleTabKeyDown(event) {
+    const currentIndex = tabs.findIndex((tab) => tab.id === selectedTab);
+    let nextIndex = currentIndex;
+
+    if (event.key === 'ArrowRight') nextIndex = (currentIndex + 1) % tabs.length;
+    else if (event.key === 'ArrowLeft') nextIndex = (currentIndex - 1 + tabs.length) % tabs.length;
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = tabs.length - 1;
+    else return;
+
+    event.preventDefault();
+    selectTab(tabs[nextIndex].id, true);
+  }
+
+  return (
+    <div className="skill-tabs">
+      <div className={`skill-tab-list skill-tab-list-${tabs.length}`} role="tablist" aria-label={`${item.name} pet details`} onKeyDown={handleTabKeyDown}>
+        {tabs.map((tab) => {
+          const selected = selectedTab === tab.id;
+          return (
+            <button
+              type="button"
+              role="tab"
+              className={`skill-tab${selected ? ' active' : ''}`}
+              id={`${idPrefix}-${tab.id}-tab`}
+              aria-selected={selected}
+              aria-controls={`${idPrefix}-${tab.id}-panel`}
+              tabIndex={selected ? 0 : -1}
+              key={tab.id}
+              onClick={() => selectTab(tab.id)}
+            >
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="skill-tab-panel" role="tabpanel" id={`${idPrefix}-${selectedTab}-panel`} aria-labelledby={`${idPrefix}-${selectedTab}-tab`}>
+        {selectedTab === 'skill' ? <PetBattleSkillLevels levels={skillLevels} /> : null}
+        {selectedTab === 'arcana' ? <PetArcanaStars item={item} /> : null}
+      </div>
     </div>
   );
 }
@@ -469,7 +802,7 @@ function HeroBrandCatalog({ category, items, routeItems, routeTarget, setRouteTa
       category={category}
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
-      renderDetail={(item) => <RarityEffects effects={item.extra?.rarity_effects || []} />}
+      renderDetail={(item) => <RarityEffects effects={item.extra?.rarity_effects || []} shadeByRarity />}
     />
   );
 }
@@ -482,13 +815,7 @@ function EquipmentCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
       category="equipment"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
-      renderDetail={(item) => (
-        <>
-          <RarityEffects effects={item.extra?.equipment_rarity_effects || []} />
-          <EquipSkillEffects skills={item.extra?.equipment_equip_skills || []} />
-          <EquipmentArcanaStars item={item} />
-        </>
-      )}
+      renderDetail={(item) => <EquipmentDetailTabs key={item.name} item={item} />}
     />
   );
 }
@@ -515,12 +842,7 @@ function PetCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
       category="pet"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
-      renderDetail={(item) => (
-        <>
-          <PetBattleSkillLevels levels={item.extra?.pet_battle_skill_levels || []} />
-          <PetArcanaStars item={item} />
-        </>
-      )}
+      renderDetail={(item) => <PetDetailTabs key={item.name} item={item} />}
     />
   );
 }
@@ -567,25 +889,15 @@ function MountCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
       category="mount"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
-      renderDetail={(item) => {
-        const rawRarity = item.rarity || item.rarity_or_quality || '';
-        return (
-          <>
-            <MountSkillSection
-              title="Active Skill"
-              levels={item.extra?.mount_skill_levels || []}
-              itemType="Active Skill"
-              labelForLevel={(level) => mountActiveSkillLabel(rawRarity, level)}
-            />
-            <MountSkillSection
-              title="Deploy Skill"
-              levels={item.extra?.riding_skill_levels || []}
-              itemType="Deploy Skill"
-              labelForLevel={mountDeploySkillLabel}
-            />
-          </>
-        );
-      }}
+      renderDetail={(item) => (
+        <ActiveDeploySkillTabs
+          key={item.name}
+          item={item}
+          itemType="mount"
+          activeLevels={item.extra?.mount_skill_levels || []}
+          deployLevels={item.extra?.riding_skill_levels || []}
+        />
+      )}
     />
   );
 }
@@ -598,25 +910,95 @@ function ArtifactCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
       category="artifact"
       routeTarget={routeTarget}
       setRouteTarget={setRouteTarget}
-      renderDetail={(item) => {
-        const rawRarity = item.rarity || item.rarity_or_quality || '';
-        return (
-          <>
-            <MountSkillSection
-              title="Active Skill"
-              levels={item.extra?.artifact_active_skill_levels || []}
-              itemType="Active Skill"
-              labelForLevel={(level) => mountActiveSkillLabel(rawRarity, level)}
-            />
-            <MountSkillSection
-              title="Deploy Skill"
-              levels={item.extra?.artifact_deploy_skill_levels || []}
-              itemType="Deploy Skill"
-              labelForLevel={mountDeploySkillLabel}
-            />
-          </>
-        );
-      }}
+      renderDetail={(item) => (
+        <ActiveDeploySkillTabs
+          key={item.name}
+          item={item}
+          itemType="artifact"
+          activeLevels={item.extra?.artifact_active_skill_levels || []}
+          deployLevels={item.extra?.artifact_deploy_skill_levels || []}
+        />
+      )}
+    />
+  );
+}
+
+function collectibleEffectValue(effect) {
+  if (!effect) return '—';
+  if (effect.formatted_value !== undefined && effect.formatted_value !== null) return effect.formatted_value;
+  if (effect.value === undefined || effect.value === null || effect.value === '') return '—';
+  return `${effect.value}${effect.unit === 'percent' ? '%' : ''}`;
+}
+
+function parseCollectibleEffect(value) {
+  const match = String(value || '').trim().match(/^(.*):\s*([^:]+)$/);
+  if (!match) return null;
+  return { stat: match[1].trim(), formatted_value: match[2].trim() };
+}
+
+function collectibleEffectTracks(effect) {
+  const cumulative = effect.cumulative_effects?.[0];
+  const additional = effect.additional_star_effects?.[0];
+  if (cumulative && additional) return { cumulative, additional };
+
+  const descriptionMatch = String(effect.description || '').match(
+    /^Cumulative at this star — (.*?)\.\s*Additional star-linked effect — (.*)$/
+  );
+
+  return {
+    cumulative: cumulative || parseCollectibleEffect(descriptionMatch?.[1]),
+    additional: additional || parseCollectibleEffect(descriptionMatch?.[2]),
+  };
+}
+
+function collectibleStatLabel(value) {
+  return value === 'Maximum HP' ? 'HP' : value;
+}
+
+function CollectibleEffectsTable({ effects = [] }) {
+  if (!effects.length) {
+    return <p className="muted">No star effects are linked for this collectible yet.</p>;
+  }
+
+  const rows = effects.map((effect) => ({ ...effect, ...collectibleEffectTracks(effect) }));
+  const baseStat = collectibleStatLabel(rows.find((effect) => effect.cumulative)?.cumulative.stat) || 'Base Effect';
+  const additionalStat = collectibleStatLabel(rows.find((effect) => effect.additional)?.additional.stat) || 'Additional Effect';
+
+  return (
+    <div className="mythic-stat-table-wrap collectible-effect-table-wrap">
+      <table className="mythic-stat-table collectible-effect-table">
+        <thead>
+          <tr>
+            <th scope="col">Star</th>
+            <th scope="col">{baseStat}</th>
+            <th scope="col">{additionalStat}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((effect) => (
+            <tr key={`collectible_effect_${effect.star}`}>
+              <th scope="row">{effect.star}★</th>
+              <td>{collectibleEffectValue(effect.cumulative)}</td>
+              <td>{collectibleEffectValue(effect.additional)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function CollectibleCatalog({ items, routeItems, routeTarget, setRouteTarget }) {
+  return (
+    <ItemCardGrid
+      items={items}
+      routeItems={routeItems}
+      category="collectible"
+      routeTarget={routeTarget}
+      setRouteTarget={setRouteTarget}
+      renderDetail={(item) => (
+        <CollectibleEffectsTable effects={item.extra?.collectible_star_effects || []} />
+      )}
     />
   );
 }
@@ -765,6 +1147,10 @@ function CatalogTable({ category, items, routeItems, routeTarget, setRouteTarget
     return <ArtifactCatalog items={items} {...routeProps} />;
   }
 
+  if (category === 'collectible') {
+    return <CollectibleCatalog items={items} {...routeProps} />;
+  }
+
   if (category === 'mythic_treasure') {
     return <MythicTreasureCatalog items={items} {...routeProps} />;
   }
@@ -776,7 +1162,7 @@ export default function Index() {
   const [routeTarget, setRouteTarget] = useState(() => parseItemRoute());
   const [category, setCategory] = useState(() => parseItemRoute()?.category || 'adventurer');
   const [q, setQ] = useState('');
-  const [rarity, setRarity] = useState('');
+  const [excludedRarities, setExcludedRarities] = useState(() => new Set());
   const [equipmentType, setEquipmentType] = useState('');
   const [items, setItems] = useState([]);
   const [message, setMessage] = useState('');
@@ -787,7 +1173,7 @@ export default function Index() {
 
     setCategory(nextRouteTarget.category);
     setQ('');
-    setRarity('');
+    setExcludedRarities(new Set());
     setEquipmentType('');
   }
 
@@ -807,7 +1193,7 @@ export default function Index() {
   }, [category, q]);
 
   useEffect(() => {
-    setRarity('');
+    setExcludedRarities(new Set());
     setEquipmentType('');
   }, [category]);
 
@@ -831,12 +1217,12 @@ export default function Index() {
 
   const displayItems = useMemo(() => {
     const filtered = items.filter((item) => {
-      if (rarity && itemRarity(item) !== rarity) return false;
+      if (excludedRarities.has(itemRarity(item))) return false;
       if (category === 'gem' && equipmentType && item.subtype !== equipmentType) return false;
       return true;
     });
     return filtered.sort((a, b) => a.name.localeCompare(b.name));
-  }, [category, equipmentType, items, rarity]);
+  }, [category, equipmentType, excludedRarities, items]);
 
   const countText = useMemo(() => `${displayItems.length} item${displayItems.length === 1 ? '' : 's'}`, [displayItems]);
   const hasRarity = rarityOptions.length > 0;
@@ -848,15 +1234,55 @@ export default function Index() {
     window.history.pushState(null, '', indexRoutePath());
   }
 
+  function toggleRarity(rarity) {
+    setExcludedRarities((current) => {
+      const next = new Set(current);
+      if (next.has(rarity)) next.delete(rarity);
+      else next.add(rarity);
+      return next;
+    });
+  }
+
   return (
     <main>
-      <div className="page-header"><div><h1>The Index</h1></div><span className="pill">{countText}</span></div>
+      <div className="page-header index-page-header">
+        <div>
+          <div className="eyebrow"><span />Browse the archive</div>
+          <h1>The Index</h1>
+        </div>
+        <span className="pill">{countText}</span>
+      </div>
       <section className="panel">
-        <div className={`grid index-filter-grid${hasRarity || hasEquipmentType ? ' has-extra-filter' : ''}`}>
-          <label className="field"><span>Category</span><select value={category} onChange={(event) => changeCategory(event.target.value)}>{SORTED_CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select></label>
-          <label className="field"><span>Search</span><input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name of item..." /></label>
-          {hasRarity ? <label className="field"><span>Rarity</span><select value={rarity} onChange={(event) => setRarity(event.target.value)}><option value="">All Rarities</option>{rarityOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
-          {hasEquipmentType ? <label className="field"><span>Equipment</span><select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All Equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}
+        <div className={`grid index-filter-grid${hasEquipmentType ? ' has-equipment-filter' : ''}`}>
+          <label className="field index-filter-control">
+            <span className="index-filter-control-header"><strong>Category</strong></span>
+            <select value={category} onChange={(event) => changeCategory(event.target.value)}>{SORTED_CATEGORIES.map((c) => <option key={c} value={c}>{categoryLabel(c)}</option>)}</select>
+          </label>
+          <label className="field index-filter-control">
+            <span className="index-filter-control-header"><strong>Search</strong></span>
+            <input value={q} onChange={(event) => setQ(event.target.value)} placeholder="Name of item..." />
+          </label>
+          {hasRarity ? (
+            <fieldset className="field rarity-filter">
+              <legend className="rarity-filter-legend">Rarity</legend>
+              <div className="rarity-filter-header">
+                <strong>Rarity</strong>
+                <button type="button" className="rarity-filter-reset" disabled={excludedRarities.size === 0} onClick={() => setExcludedRarities(new Set())}>Show all</button>
+              </div>
+              <div className="rarity-toggle-list">
+                {rarityOptions.map((value) => {
+                  const isIncluded = !excludedRarities.has(value);
+                  return <button type="button" className="rarity-toggle" aria-pressed={isIncluded} key={value} onClick={() => toggleRarity(value)}>{value}</button>;
+                })}
+              </div>
+            </fieldset>
+          ) : null}
+          {hasEquipmentType ? (
+            <label className="field index-filter-control">
+              <span className="index-filter-control-header"><strong>Equipment</strong></span>
+              <select value={equipmentType} onChange={(event) => setEquipmentType(event.target.value)}><option value="">All Equipment</option>{equipmentTypeOptions.map((value) => <option key={value} value={value}>{value}</option>)}</select>
+            </label>
+          ) : null}
         </div>
       </section>
       <CatalogTable category={category} items={displayItems} routeItems={items} routeTarget={routeTarget} setRouteTarget={setRouteTarget} />

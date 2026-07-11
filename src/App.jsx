@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Home from './pages/Home.jsx';
 import Catalog from './pages/Catalog.jsx';
 import Changelog from './pages/Changelog.jsx';
 
@@ -7,7 +8,7 @@ function basePath() {
 }
 
 function pageFromPath() {
-  if (typeof window === 'undefined') return 'index';
+  if (typeof window === 'undefined') return 'home';
 
   const base = basePath();
   let pathname = window.location.pathname;
@@ -15,12 +16,22 @@ function pageFromPath() {
     pathname = pathname.slice(base.length) || '/';
   }
 
-  return pathname === '/changelog' ? 'changelog' : 'index';
+  if (pathname === '/changelog') return 'changelog';
+  if (pathname === '/index' || /^\/[^/=]+=[^/]+$/.test(pathname) || window.location.search) return 'index';
+  return 'home';
 }
 
 function pagePath(page) {
-  return `${basePath()}/${page === 'changelog' ? 'changelog' : ''}`;
+  if (page === 'index') return `${basePath()}/index`;
+  if (page === 'changelog') return `${basePath()}/changelog`;
+  return `${basePath()}/`;
 }
+
+const NAV_ITEMS = [
+  { id: 'home', label: 'Home' },
+  { id: 'index', label: 'Index' },
+  { id: 'changelog', label: 'Changelog' },
+];
 
 export default function App() {
   const [tab, setTab] = useState(() => pageFromPath());
@@ -38,24 +49,47 @@ export default function App() {
     setTab(nextTab);
     if (typeof window !== 'undefined') {
       window.history.pushState(null, '', pagePath(nextTab));
+      window.scrollTo({ top: 0 });
     }
   }
 
+  let page = <Home onNavigate={changeTab} />;
+  if (tab === 'index') page = <Catalog />;
+  if (tab === 'changelog') page = <Changelog />;
+
   return (
     <>
-      <header className="app-header public-index-header">
-        <div>
-          <strong>CapyDex - The Holy Grail </strong>
-          <span>Updated as of v1.8.18</span>
+      <header className="app-header">
+        <div className="app-header-inner">
+          <button type="button" className="site-brand" onClick={() => changeTab('home')} aria-label="CapyDex home">
+            <span className="site-brand-mark" aria-hidden="true">C</span>
+            <span className="site-brand-copy">
+              <strong>CapyDex</strong>
+            </span>
+          </button>
+          <nav className="site-nav" aria-label="Primary navigation">
+            {NAV_ITEMS.map((item) => (
+              <button
+                type="button"
+                className={`site-nav-button${tab === item.id ? ' active' : ''}`}
+                aria-current={tab === item.id ? 'page' : undefined}
+                key={item.id}
+                onClick={() => changeTab(item.id)}
+              >
+                {item.label}
+              </button>
+            ))}
+          </nav>
+          <span className="version-badge"><i />v1.8.19</span>
         </div>
-        <nav className="public-index-tabs" aria-label="Primary">
-          <button type="button" className={tab === 'index' ? 'active' : ''} onClick={() => changeTab('index')}>Index</button>
-          <button type="button" className={tab === 'changelog' ? 'active' : ''} onClick={() => changeTab('changelog')}>Changelog</button>
-        </nav>
       </header>
-      {tab === 'index' ? <Catalog /> : <Changelog />}
+      {page}
       <footer className="public-index-footer">
-        Unofficial community project. Not affiliated with Habby. Game information may change between versions.
+        <div className="footer-brand">
+          <span className="site-brand-mark" aria-hidden="true">C</span>
+          <div><strong>CapyDex</strong><span>A community field guide for Capybara Go.</span></div>
+        </div>
+        <p>Unofficial community project. Not affiliated with Habby. Game information may change between versions.</p>
       </footer>
     </>
   );
