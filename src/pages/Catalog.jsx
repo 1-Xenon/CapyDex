@@ -306,24 +306,16 @@ function EquipmentArcanaStars({ item }) {
   );
 }
 
-function boldPercentValues(description = '') {
-  return String(description)
-    .split(/([+-]?\d+(?:\.\d+)?%)/g)
-    .map((part, index) => (
-      /^[+-]?\d+(?:\.\d+)?%$/.test(part)
-        ? <strong className="gem-percent-value" key={`${part}_${index}`}>{part}</strong>
-        : part
-    ));
-}
-
 function GemRarityEffects({ effects = [] }) {
   if (!effects.length) {
     return <p className="muted">No gem rarity values are linked for this entry yet.</p>;
   }
 
+  const persistentHighlightedValues = new Set();
+
   return (
     <div className="rarity-effect-list">
-      {effects.map((effect) => {
+      {effects.map((effect, index) => {
         const rarityColor = RARITY_CARD_COLORS[effect.rarity];
         return (
           <div
@@ -334,7 +326,7 @@ function GemRarityEffects({ effects = [] }) {
             <strong className="rarity-effect-title gem-rarity-effect-title">
               <GemRarityLabel rarity={effect.rarity} />
             </strong>
-            <p>{boldPercentValues(effect.description || 'No visible player-facing description linked.')}</p>
+            <p>{highlightSkillUpgrade(effect.description, effects[index - 1]?.description, persistentHighlightedValues) || 'No visible player-facing description linked.'}</p>
           </div>
         );
       })}
